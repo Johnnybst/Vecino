@@ -13,7 +13,7 @@ from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
-from api.hazards import get_demo_hazards
+from api.hazards import get_hazards
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILES = {"driving-car", "foot-walking", "cycling-regular"}
@@ -90,11 +90,9 @@ def clearance_m(coordinates, center):
 
 
 def load_demo_hazards():
-    """Use Person 1's circles and fading weights directly, without HTTP."""
-    if os.getenv("DEMO_MODE", "false").lower() != "true":
-        raise ValueError("Live reports are not connected yet. Set DEMO_MODE=true.")
+    """Load shared demo or live circles; keep this name for existing callers."""
     hazards = []
-    for feature in get_demo_hazards()["features"]:
+    for feature in get_hazards()["features"]:
         ring = feature["geometry"]["coordinates"][0][:-1]
         hazards.append({
             **feature["properties"],
@@ -104,12 +102,18 @@ def load_demo_hazards():
     return hazards
 
 
-def template_explanation(extra_minutes, report_count, left_out):
-    if report_count:
+def template_explanation(extra_minutes, area_count, report_count, left_out):
+    if area_count:
+        minute_en = "minute" if extra_minutes == 1 else "minutes"
+        area_en = "area" if area_count == 1 else "areas"
+        report_en = "report" if report_count == 1 else "reports"
+        minute_es = "minuto" if extra_minutes == 1 else "minutos"
+        area_es = "zona" if area_count == 1 else "zonas"
+        report_es = "reporte" if report_count == 1 else "reportes"
         return {
-            "en": f"This route adds {extra_minutes} minutes and avoids {report_count} reported activity areas.",
-            "es": f"Esta ruta añade {extra_minutes} minutos y evita {report_count} zonas con actividad reportada.",
-            "ht": f"Wout sa a ajoute {extra_minutes} minit epi li evite {report_count} zòn kote yo rapòte aktivite.",
+            "en": f"This route adds {extra_minutes} {minute_en} and avoids {area_count} reported {area_en} containing {report_count} {report_en}.",
+            "es": f"Esta ruta añade {extra_minutes} {minute_es} y evita {area_count} {area_es} con {report_count} {report_es} de actividad.",
+            "ht": f"Wout sa a ajoute {extra_minutes} minit epi li evite {area_count} zòn ki gen {report_count} rapò aktivite.",
         }
     if left_out:
         return {
@@ -201,7 +205,8 @@ async def _build_routes(origin, destination, profile, hazards, saved=None):
         detour["geometry"]["coordinates"], h["center"]) >= radius]
     extra = max(0, math.ceil((detour["properties"]["duration_s"]
                              - normal["properties"]["duration_s"]) / 60))
-    explanation = template_explanation(extra, len(avoided), left_out)
+    report_count = sum(h["report_count"] for h in usable if h["id"] in avoided)
+    explanation = template_explanation(extra, len(avoided), report_count, left_out)
     if avoided and not left_out and saved is None:
         # Import here: Person 4's module imports ROOT from this module.
         from api.explain import explain, backup_sentence
