@@ -1,0 +1,144 @@
+import { useEffect, useState } from 'react'
+import { InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
+import { reportSummary, useI18n } from './i18n'
+
+export type Hazard = {
+  type: 'Feature'
+  geometry: { type: 'Polygon'; coordinates: [number, number][][] }
+  properties: {
+    id: string
+    summary: string
+    reported_at: string
+    confidence: number
+    report_count: number
+    weight: number
+  }
+}
+
+function isHazard(value: unknown): value is Hazard {
+  if (!value || typeof value !== 'object') return false
+  const feature = value as Hazard
+  const properties = feature.properties
+  return feature.type === 'Feature' && feature.geometry?.type === 'Polygon'
+    && Array.isArray(feature.geometry.coordinates) && feature.geometry.coordinates.length > 0
+    && feature.geometry.coordinates.every((ring) => Array.isArray(ring) && ring.length >= 4
+      && ring.every((point) => Array.isArray(point) && point.length >= 2
+        && Number.isFinite(point[0]) && Math.abs(point[0]) <= 180
+        && Number.isFinite(point[1]) && Math.abs(point[1]) <= 90))
+    && !!properties && typeof properties.id === 'string'
+    && typeof properties.summary === 'string'
+    && typeof properties.reported_at === 'string' && Number.isFinite(Date.parse(properties.reported_at))
+    && Number.isFinite(properties.confidence) && properties.confidence >= 0 && properties.confidence <= 1
+    && Number.isInteger(properties.report_count) && properties.report_count >= 0
+    && Number.isFinite(properties.weight) && properties.weight >= 0 && properties.weight <= 1
+}
+
+export function HazardsLayer({ onHazardsChange, hideStatus = false }: {
+  onHazardsChange: (hazards: Hazard[]) => void
+  hideStatus?: boolean
+}) {
+  const { t, language } = useI18n()
+  const map = useMap()
+  const maps = useMapsLibrary('maps')
+  const [hazards, setHazards] = useState<Hazard[]>([])
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [updatedAt, setUpdatedAt] = useState(0)
+
+  useEffect(() => {
+    let disposed = false
+    let controller: AbortController | undefined
+    let nextRefresh: ReturnType<typeof setTimeout> | undefined
+    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+
+    async function refresh() {
+      controller = new AbortController()
+      const timeout = setTimeout(() => controller?.abort(), 10000)
+      try {
+        const response = await fetch(`${baseUrl}/hazards`, {
+          signal: controller.signal,
+          cache: 'no-store',
+          credentials: 'omit',
+        })
+        if (!response.ok) throw new Error('Reports unavailable')
+        const data: unknown = await response.json()
+        if (!data || typeof data !== 'object' || !('type' in data) || data.type !== 'FeatureCollection'
+          || !('features' in data) || !Array.isArray(data.features) || !data.features.every(isHazard)) {
+          throw new Error('Invalid reports')
+        }
+        if (disposed) return
+        const visible = data.features.filter((feature) => feature.properties.weight >= 0.1)
+        setHazards(visible)
+        onHazardsChange(visible)
+        setUpdatedAt(Date.now())
+        setStatus('ready')
+      } catch {
+        if (disposed) return
+        // Remove old circles rather than presenting them as current reports.
+        setHazards([])
+        onHazardsChange([])
+        setStatus('error')
+      } finally {
+        clearTimeout(timeout)
+        if (!disposed) nextRefresh = setTimeout(refresh, 60000)
+      }
+    }
+
+    void refresh()
+    return () => {
+      disposed = true
+      controller?.abort()
+      clearTimeout(nextRefresh)
+    }
+  }, [onHazardsChange])
+
+  useEffect(() => {
+    if (!map || !maps) return
+    const circles = hazards.map((feature) => {
+      const circle = new maps.Polygon({
+        map,
+        paths: feature.geometry.coordinates.map((ring) => ring.map(([lng, lat]) => ({ lat, lng }))),
+        fillColor: '#b85f61',
+        fillOpacity: 0.15 + 0.45 * feature.properties.weight,
+        strokeColor: '#a95356',
+        strokeWeight: 2,
+        zIndex: 1,
+      })
+      const listener = circle.addListener('click', () => setSelectedId(feature.properties.id))
+      return { circle, listener }
+    })
+    return () => circles.forEach(({ circle, listener }) => {
+      listener.remove()
+      circle.setMap(null)
+    })
+  }, [map, maps, hazards])
+
+  const selected = hazards.find((feature) => feature.properties.id === selectedId)
+  const ring = selected?.geometry.coordinates[0].slice(0, -1)
+  const position = ring && {
+    lng: ring.reduce((sum, point) => sum + point[0], 0) / ring.length,
+    lat: ring.reduce((sum, point) => sum + point[1], 0) / ring.length,
+  }
+
+  return (
+    <>
+      <p className={`hazards-status${hideStatus ? ' with-route' : ''}`} role="status" hidden={hideStatus && status === 'ready'}>
+        {status === 'loading' && t.loadingReports}
+        {status === 'ready' && t.reportsStatus(hazards.length)}
+        {status === 'error' && t.reportsUnavailable}
+      </p>
+      {selected && position && (
+        <InfoWindow position={position} headerContent={t.activityDemo} maxWidth={260}
+          onCloseClick={() => setSelectedId(null)}>
+          <div className="report-popup">
+            <p>{reportSummary(selected.properties.summary, selected.properties.report_count, language)}</p>
+            <p>{t.areaReports(selected.properties.report_count)}</p>
+            <p>{t.reportAge(Math.max(0, Math.floor((updatedAt - Date.parse(selected.properties.reported_at)) / 60000)))}</p>
+            <p>{t.confidence(selected.properties.confidence)}</p>
+            <p>{t.syntheticNotice}</p>
+          </div>
+        </InfoWindow>
+      )}
+    </>
+  )
+}
