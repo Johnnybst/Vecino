@@ -5,6 +5,7 @@ is exported. The server uses build_routes without exporting user trips.
 """
 
 import asyncio
+import argparse
 import json
 import math
 import os
@@ -19,6 +20,11 @@ PROFILES = {"driving-car", "foot-walking", "cycling-regular"}
 REPORT_RADIUS_M = 150
 # Demo spacing preference, not a verified safe distance.
 EXTRA_GAP_M = 300
+DEMO_ORIGIN = [-80.230, 25.7653]
+DEMO_DESTINATION = [-80.209, 25.7653]
+DEMO_PROFILE = "driving-car"
+BACKUP_FILE = ROOT / "data" / "demo_route.json"
+EXPLANATION_TIMEOUT_S = 4
 
 
 async def get_route(client, origin, destination, profile="driving-car", polygons=None):
@@ -119,6 +125,29 @@ def template_explanation(extra_minutes, report_count, left_out):
 
 
 async def build_routes(origin, destination, profile, hazards):
+    """Use a saved fixed demo only on a service outage, never for other trips."""
+    try:
+        return await _build_routes(origin, destination, profile, hazards)
+    except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+        if isinstance(exc, httpx.HTTPStatusError):
+            if exc.response.status_code != 429 and exc.response.status_code < 500:
+                raise
+        if not (os.getenv("DEMO_MODE", "false").lower() == "true"
+                and list(origin) == DEMO_ORIGIN and list(destination) == DEMO_DESTINATION
+                and profile == DEMO_PROFILE):
+            raise
+        saved = json.loads(BACKUP_FILE.read_text())
+        # Recalculate report IDs and check spacing against today's demo circles.
+        result = await _build_routes(origin, destination, profile, hazards, saved=saved)
+        result["explanation"] = {
+            "en": "Saved demo route: directions service unavailable. Report comparisons use the current demo circles.",
+            "es": "Ruta de demostración guardada: servicio de rutas no disponible. La comparación usa los círculos actuales de demostración.",
+            "ht": "Wout demonstrasyon anrejistre: sèvis direksyon an pa disponib. Konparezon rapò yo sèvi ak sèk demonstrasyon aktyèl yo.",
+        }
+        return result
+
+
+async def _build_routes(origin, destination, profile, hazards, saved=None):
     """Build the team's response with a 300 m extra gap and no trip storage."""
     radius = REPORT_RADIUS_M + EXTRA_GAP_M
     # Match the circumscribed avoidance polygon when excluding endpoints.
@@ -135,7 +164,18 @@ async def build_routes(origin, destination, profile, hazards):
             usable.append(hazard)
 
     async with httpx.AsyncClient(timeout=30) as client:
-        normal = await get_route(client, origin, destination, profile)
+        async def request_route(polygons=None):
+            if saved is None:
+                return await get_route(client, origin, destination, profile, polygons)
+            route = saved["safe" if polygons else "normal"]
+            if (route["geometry"]["type"] != "LineString"
+                    or len(route["geometry"]["coordinates"]) < 2):
+                raise ValueError("Invalid saved demo route.")
+            return {"geometry": route["geometry"], "properties": {
+                "duration_s": route["duration_s"], "distance_m": route["distance_m"],
+            }}
+
+        normal = await request_route()
         line = normal["geometry"]["coordinates"]
         crossed = [h["id"] for h in active if clearance_m(
             line, [h["longitude"], h["latitude"]]) <= REPORT_RADIUS_M]
@@ -144,7 +184,15 @@ async def build_routes(origin, destination, profile, hazards):
         needs_detour = any(h["id"] in crossed for h in usable)
         if needs_detour:
             polygons = [[circle_ring(h["center"], outer_radius)] for h in usable]
-            detour = await get_route(client, origin, destination, profile, polygons)
+            try:
+                detour = await request_route(polygons)
+            except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+                # Credentials and rate limits cannot be fixed with fewer circles.
+                if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (401, 403, 429):
+                    raise
+                strongest = sorted(usable, key=lambda h: h["weight"], reverse=True)[:10]
+                polygons = [[circle_ring(h["center"], outer_radius)] for h in strongest]
+                detour = await request_route(polygons)
             if any(clearance_m(detour["geometry"]["coordinates"], h["center"]) < radius
                    for h in usable):
                 raise ValueError("No route with the requested extra gap was found.")
@@ -154,11 +202,42 @@ async def build_routes(origin, destination, profile, hazards):
     extra = max(0, math.ceil((detour["properties"]["duration_s"]
                              - normal["properties"]["duration_s"]) / 60))
     explanation = template_explanation(extra, len(avoided), left_out)
+    if avoided and not left_out and saved is None:
+        # Import here: Person 4's module imports ROOT from this module.
+        from api.explain import explain, backup_sentence
+
+        summaries = [h["summary"] for h in usable if h["id"] in avoided]
+        try:
+            result = await asyncio.wait_for(
+                explain(extra, summaries), timeout=EXPLANATION_TIMEOUT_S,
+            )
+            if not isinstance(result, dict) or any(
+                not isinstance(result.get(lang), str)
+                or not result[lang].strip() or len(result[lang].split()) > 25
+                for lang in ("en", "es", "ht")
+            ):
+                raise ValueError("Invalid explanation.")
+            explanation = {lang: result[lang] for lang in ("en", "es", "ht")}
+        except Exception:
+            explanation = backup_sentence(extra, len(avoided))
     return {
         "safe": {"geometry": detour["geometry"], **detour["properties"], "hazards_avoided": avoided},
         "normal": {"geometry": normal["geometry"], **normal["properties"], "hazards_crossed": crossed},
         "extra_minutes": extra, "explanation": explanation, "left_out": left_out,
     }
+
+
+async def save_demo_backup():
+    """Explicitly save only this fixed public trip; API requests never write files."""
+    load_dotenv(ROOT / ".env")
+    result = await _build_routes(
+        DEMO_ORIGIN, DEMO_DESTINATION, DEMO_PROFILE, load_demo_hazards(),
+    )
+    if not result["safe"]["hazards_avoided"]:
+        raise ValueError("The demo trip must demonstrate a detour before saving.")
+    BACKUP_FILE.write_text(json.dumps(result, indent=2) + "\n")
+    print("Saved fixed Little Havana driving demo to data/demo_route.json.")
+    print(f"Demo detour adds {result['extra_minutes']} minutes.")
 
 
 async def demo():
@@ -204,8 +283,11 @@ async def demo():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--save-backup", action="store_true", help="Save the fixed Little Havana demo response")
+    args = parser.parse_args()
     try:
-        asyncio.run(demo())
+        asyncio.run(save_demo_backup() if args.save_backup else demo())
     except httpx.HTTPStatusError as exc:
         raise SystemExit(f"Route service returned HTTP {exc.response.status_code}.") from None
     except httpx.RequestError:

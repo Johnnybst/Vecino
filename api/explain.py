@@ -16,8 +16,8 @@ from api.routing import ROOT
 
 load_dotenv(ROOT / ".env")
 
-# AGENTS.md says 4 s, but Gemini often takes 3-5 s, so 4 s cut it off about half the time.
-TIMEOUT_S = 6
+# Keep navigation responsive even if the provider is slow.
+TIMEOUT_S = 4
 # Same trip -> same sentence, so Gemini is only asked once.
 _saved = {}
 
@@ -98,18 +98,26 @@ async def explain(extra_minutes, hazards_avoided, lang=None):
 
 
 async def _ask_gemini(extra_minutes, summaries):
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-    response = await client.aio.models.generate_content(
-        model=os.environ["GEMINI_MODEL"],
-        contents=build_prompt(extra_minutes, summaries),
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=Sentences,
-            temperature=0.3,
-            # "low" keeps answers around 3 s, under the 4 s limit.
-            thinking_config=types.ThinkingConfig(thinking_level="low"),
+    client = genai.Client(
+        api_key=os.environ["GEMINI_API_KEY"],
+        http_options=types.HttpOptions(
+            # Google requires a >=10 s network deadline. explain() still
+            # cancels after 4 s and returns the plain backup sentence.
+            timeout=10000, retry_options=types.HttpRetryOptions(attempts=1),
         ),
     )
+    async with client.aio as async_client:
+        response = await async_client.models.generate_content(
+            model=os.environ["GEMINI_MODEL"],
+            contents=build_prompt(extra_minutes, summaries),
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=Sentences,
+                temperature=0.3,
+                thinking_config=types.ThinkingConfig(thinking_level="minimal"),
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+            ),
+        )
     return Sentences.model_validate_json(response.text).model_dump()
 
 
