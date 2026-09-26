@@ -329,3 +329,44 @@
   font-size: 13px;
   line-height: 1.4;
 }
+
+.hazards-status.fade-status {
+  top: 140px;
+  bottom: auto;
+}
+
+.fade-card {
+  max-height: 40dvh;
+  overflow-y: auto;
+}
+
+.fade-label {
+  display: block;
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.fade-output {
+  display: block;
+  margin-top: 4px;
+}
+
+.fade-card input[type='range'] {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  accent-color: #24583d;
+}
+
+.fade-card input:focus-visible {
+  outline: 3px solid #24583d;
+  outline-offset: 2px;
+}
+
+.fade-endpoints {
+  display: flex;
+  justify-content: space-between;
+  color: #526159;
+  font-size: 13px;
+}

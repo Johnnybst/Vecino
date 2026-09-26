@@ -3,6 +3,7 @@ import os
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
@@ -19,7 +20,7 @@ class LiveHazardsTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name) / "reports.db"
         self.now = datetime.now(timezone.utc)
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("""CREATE TABLE clusters (
                 id INTEGER, primary_location TEXT, latitude REAL, longitude REAL,
                 confidence_score REAL, source_count INTEGER, latest_report TEXT,
@@ -53,7 +54,7 @@ class LiveHazardsTests(unittest.TestCase):
             (self.now - timedelta(minutes=10)).replace(tzinfo=None).isoformat(),
             (self.now - timedelta(minutes=10)).astimezone(timezone(timedelta(hours=-4))).isoformat(),
         ):
-            with sqlite3.connect(self.path) as db:
+            with closing(sqlite3.connect(self.path)) as db, db:
                 db.execute("UPDATE clusters SET latest_report = ? WHERE id = 1", (stamp,))
             self.assertEqual(get_hazards(self.now)["features"][0]["properties"]["id"], "hz_1")
 
@@ -68,7 +69,7 @@ class LiveHazardsTests(unittest.TestCase):
         self.assertFalse(missing.exists())
 
     def test_empty_database_returns_empty_collection(self):
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db, db:
             db.execute("DELETE FROM clusters")
         self.assertEqual(get_hazards(self.now), {"type": "FeatureCollection", "features": []})
 

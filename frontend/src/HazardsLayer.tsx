@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { reportSummary, useI18n } from './i18n'
+import { demoMode } from './config'
 
 export type Hazard = {
   type: 'Feature'
@@ -33,9 +34,11 @@ function isHazard(value: unknown): value is Hazard {
     && Number.isFinite(properties.weight) && properties.weight >= 0 && properties.weight <= 1
 }
 
-export function HazardsLayer({ onHazardsChange, hideStatus = false }: {
+export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview = false }: {
   onHazardsChange: (hazards: Hazard[]) => void
   hideStatus?: boolean
+  at?: string
+  preview?: boolean
 }) {
   const { t, language } = useI18n()
   const map = useMap()
@@ -55,7 +58,7 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false }: {
       controller = new AbortController()
       const timeout = setTimeout(() => controller?.abort(), 10000)
       try {
-        const response = await fetch(`${baseUrl}/hazards`, {
+        const response = await fetch(`${baseUrl}/hazards${at ? `?at=${encodeURIComponent(at)}` : ''}`, {
           signal: controller.signal,
           cache: 'no-store',
           credentials: 'omit',
@@ -70,7 +73,7 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false }: {
         const visible = data.features.filter((feature) => feature.properties.weight >= 0.1)
         setHazards(visible)
         onHazardsChange(visible)
-        setUpdatedAt(Date.now())
+        setUpdatedAt(at ? Date.parse(at) : Date.now())
         setStatus('ready')
       } catch {
         if (disposed) return
@@ -90,7 +93,7 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false }: {
       controller?.abort()
       clearTimeout(nextRefresh)
     }
-  }, [onHazardsChange])
+  }, [onHazardsChange, at])
 
   useEffect(() => {
     if (!map || !maps) return
@@ -122,20 +125,21 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false }: {
 
   return (
     <>
-      <p className={`hazards-status${hideStatus ? ' with-route' : ''}`} role="status" hidden={hideStatus && status === 'ready'}>
-        {status === 'loading' && t.loadingReports}
-        {status === 'ready' && t.reportsStatus(hazards.length)}
+      <p className={`hazards-status${hideStatus ? ' with-route' : ''}${preview ? ' fade-status' : ''}`} role="status" hidden={hideStatus && status === 'ready'}>
+        {status === 'loading' && (demoMode ? t.loadingReports : t.loadingLiveReports)}
+        {status === 'ready' && (preview ? t.previewReportStatus(hazards.length)
+          : demoMode ? t.reportsStatus(hazards.length) : t.liveReportsStatus(hazards.length))}
         {status === 'error' && t.reportsUnavailable}
       </p>
       {selected && position && (
-        <InfoWindow position={position} headerContent={t.activityDemo} maxWidth={260}
+        <InfoWindow position={position} headerContent={demoMode ? t.activityDemo : t.reportedArea} maxWidth={260}
           onCloseClick={() => setSelectedId(null)}>
           <div className="report-popup">
             <p>{reportSummary(selected.properties.summary, selected.properties.report_count, language)}</p>
             <p>{t.areaReports(selected.properties.report_count)}</p>
             <p>{t.reportAge(Math.max(0, Math.floor((updatedAt - Date.parse(selected.properties.reported_at)) / 60000)))}</p>
             <p>{t.confidence(selected.properties.confidence)}</p>
-            <p>{t.syntheticNotice}</p>
+            {demoMode && <p>{t.syntheticNotice}</p>}
           </div>
         </InfoWindow>
       )}

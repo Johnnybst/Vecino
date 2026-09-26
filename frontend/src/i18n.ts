@@ -4,6 +4,12 @@ export type Language = 'en' | 'es' | 'ht'
 export const languageNames: Record<Language, string> = { en: 'English', es: 'Español', ht: 'Kreyòl' }
 
 const en = {
+  loadingLiveReports: 'Loading reports...', liveRouteNotice: 'Routes based on reported activity',
+  liveReportsStatus: (n: number) => `Reported activity: ${n} ${n === 1 ? 'area' : 'areas'}. Refreshes every minute.`,
+  showFade: 'Watch reports fade', fadePreview: 'Report fading demo', demoTime: 'Move time forward',
+  fadeHint: 'Demo only · Watch older reports fade and disappear.', resetTime: 'Reset to now',
+  timeAhead: (n: number) => n === 0 ? 'Now' : `+${n} min`,
+  previewReportStatus: (n: number) => `${n} reported ${n === 1 ? 'area' : 'areas'} at this time.`,
   language: 'Language', mapLabel: 'Map of Miami', chooseTrip: 'Choose your trip',
   whereGoing: 'Where are you going?', from: 'From', to: 'To',
   originPlaceholder: 'Starting address', destinationPlaceholder: 'Destination address',
@@ -51,6 +57,12 @@ type Messages = typeof en
 export type TextKey = { [K in keyof Messages]: Messages[K] extends string ? K : never }[keyof Messages]
 
 const es: Messages = {
+  loadingLiveReports: 'Cargando reportes...', liveRouteNotice: 'Rutas basadas en actividad reportada',
+  liveReportsStatus: (n) => `Actividad reportada: ${n} ${n === 1 ? 'zona' : 'zonas'}. Se actualiza cada minuto.`,
+  showFade: 'Ver cómo se atenúan los reportes', fadePreview: 'Demostración del paso del tiempo', demoTime: 'Adelantar el tiempo',
+  fadeHint: 'Solo demostración · Los reportes antiguos se atenúan y desaparecen.', resetTime: 'Volver al presente',
+  timeAhead: (n) => n === 0 ? 'Ahora' : `+${n} min`,
+  previewReportStatus: (n) => `${n} ${n === 1 ? 'zona reportada' : 'zonas reportadas'} en este momento.`,
   language: 'Idioma', mapLabel: 'Mapa de Miami', chooseTrip: 'Elige tu viaje',
   whereGoing: '¿Adónde vas?', from: 'Desde', to: 'Hasta',
   originPlaceholder: 'Dirección de salida', destinationPlaceholder: 'Dirección de destino',
@@ -95,6 +107,12 @@ const es: Messages = {
 }
 
 const ht: Messages = {
+  loadingLiveReports: 'N ap chaje rapò yo...', liveRouteNotice: 'Wout ki baze sou aktivite rapòte',
+  liveReportsStatus: (n) => `Aktivite rapòte: ${n} zòn. Yo mete ajou chak minit.`,
+  showFade: 'Gade rapò yo vin pal', fadePreview: 'Demonstrasyon rapò k ap fennen', demoTime: 'Avanse tan an',
+  fadeHint: 'Demonstrasyon sèlman · Ansyen rapò yo vin pal epi yo disparèt.', resetTime: 'Retounen nan kounye a',
+  timeAhead: (n) => n === 0 ? 'Kounye a' : `+${n} min`,
+  previewReportStatus: (n) => `${n} zòn rapòte nan moman sa a.`,
   language: 'Lang', mapLabel: 'Kat Miami', chooseTrip: 'Chwazi vwayaj ou',
   whereGoing: 'Ki kote ou prale?', from: 'Depa', to: 'Destinasyon',
   originPlaceholder: 'Adrès depa', destinationPlaceholder: 'Adrès destinasyon',

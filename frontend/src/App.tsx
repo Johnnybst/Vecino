@@ -10,6 +10,9 @@ import type { RouteResult } from './routeTypes'
 import { I18nContext, messages, useI18n } from './i18n'
 import type { Language, TextKey } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
+import { FadePreview } from './FadePreview'
+
+import { demoMode } from './config'
 
 type Coordinates = { lat: number; lng: number }
 const travelModes = [
@@ -99,8 +102,9 @@ function AddressInput({ kind, onSelect }: {
   )
 }
 
-function AddressPanel({ onShowDemo, onRoute, hazards }: {
+function AddressPanel({ onShowDemo, onShowFade, onRoute, hazards }: {
   onShowDemo: () => void
+  onShowFade: () => void
   onRoute: (result: RouteResult) => void
   hazards: Hazard[]
 }) {
@@ -252,6 +256,9 @@ function AddressPanel({ onShowDemo, onRoute, hazards }: {
       <button type="button" className="location-button sample-link" onClick={onShowDemo} disabled={loadingRoute}>
         {t.showSample}
       </button>
+      {demoMode && <button type="button" className="location-button sample-link" onClick={onShowFade} disabled={loadingRoute}>
+        {t.showFade}
+      </button>}
     </section>
   )
 }
@@ -259,6 +266,7 @@ function AddressPanel({ onShowDemo, onRoute, hazards }: {
 function App() {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY
   const [showDemo, setShowDemo] = useState(false)
+  const [showFade, setShowFade] = useState(false)
   const [hazards, setHazards] = useState<Hazard[]>([])
   const [route, setRoute] = useState<RouteResult | null>(null)
   const [language, setLanguage] = useState<Language>('en')
@@ -288,12 +296,13 @@ function App() {
           streetViewControl={false}
           fullscreenControl={false}
         />
-        <div hidden={showDemo || route !== null}>
-          <AddressPanel onShowDemo={() => setShowDemo(true)} onRoute={setRoute} hazards={hazards} />
+        <div hidden={showDemo || showFade || route !== null}>
+          <AddressPanel onShowDemo={() => setShowDemo(true)} onShowFade={() => setShowFade(true)} onRoute={setRoute} hazards={hazards} />
         </div>
         {showDemo && <DemoMap onClose={() => setShowDemo(false)} />}
-        {!showDemo && <HazardsLayer onHazardsChange={setHazards} hideStatus={route !== null} />}
-        {route && !showDemo && <RouteLayer result={route} onEdit={() => setRoute(null)} />}
+        {!showDemo && !showFade && <HazardsLayer onHazardsChange={setHazards} hideStatus={route !== null} />}
+        {route && !showDemo && !showFade && <RouteLayer result={route} onEdit={() => setRoute(null)} />}
+        {demoMode && showFade && <FadePreview onClose={() => setShowFade(false)} />}
       </APIProvider>
     </main>
     </I18nContext.Provider>

@@ -3,6 +3,7 @@ import { useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import type { RouteResult } from './routeTypes'
 import { useI18n } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
+import { demoMode } from './config'
 
 export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: () => void }) {
   const { t, language } = useI18n()
@@ -55,7 +56,7 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
         </div>
       </div>
       <section className="demo-card route-card" aria-label={t.routeComparison}>
-        <p className="demo-notice">{t.routeNotice}</p>
+        <p className="demo-notice">{demoMode ? t.routeNotice : t.liveRouteNotice}</p>
         <h2>{t.routeHeadline(route.extra_minutes, avoided.size)}</h2>
         <p>{route.explanation[language]}</p>
         <p className="route-details">

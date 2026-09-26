@@ -1,75 +1,35 @@
-# React + TypeScript + Vite
+# Vecino frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+From `frontend/`, install and start the app:
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```powershell
+npm.cmd install
+npm.cmd run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Create `frontend/.env` using `.env.example` as the template. Enter the Google Maps browser key locally; never commit `.env`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `VITE_GOOGLE_MAPS_KEY`: the Google Maps browser key.
+- `VITE_API_URL`: the server address, with no `/hazards` or `/route` suffix.
+- `VITE_DEMO_MODE`: must match the server's `DEMO_MODE` setting.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Demo and live reports
 
+For the hackathon demo, use `DEMO_MODE=true` in the server's root `.env` and `VITE_DEMO_MODE=true` in `frontend/.env`. The map labels the reports as synthetic and offers the time slider. The slider calls `/hazards?at=<UTC time>`; it does not calculate routes for the simulated time.
+
+For collected reports, Person 1 must first provide a working collector database and configure the server with `DEMO_MODE=false` and its `DB_PATH`. Then set `VITE_DEMO_MODE=false` in the frontend. This removes synthetic labels from server reports and hides the time slider. The separate sample-route screen remains explicitly marked as demo data.
+
+Changing the frontend flag does not change the server's data source. An empty live feed means no reports were returned, not a guarantee that an area is clear. Restart local services after changing their settings. Vercel environment changes require a new deployment.
+
+## Checks
+
+```powershell
+npm.cmd run build
+npm.cmd run lint
 ```
+
+At 390 x 844, check English, Spanish and Haitian Creole controls, route cards, circle popups and the demo time slider. Switching languages uses the existing server explanation and does not send another route request.
+
+## Hosting handoff
+
+For Vercel, use `frontend` as the root directory, the Vite preset, `npm run build`, and output directory `dist`. Set the three frontend environment variables there; `VITE_API_URL` must be the hosted HTTPS server address, not localhost. Person 1 must allow the frontend domain in the server's CORS settings. ORS and Gemini keys belong only on the server, never in `VITE_` variables.
