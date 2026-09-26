@@ -62,3 +62,7 @@ Thumbs.db
 *.tmp
 *.temp
 nul
+
+# Frontend
+node_modules/
+frontend/dist/
