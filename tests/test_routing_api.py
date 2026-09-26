@@ -52,7 +52,8 @@ class RouteApiTests(unittest.TestCase):
             response = self.client.post("/route", json=TRIP)
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(set(data), {"safe", "normal", "extra_minutes", "explanation", "left_out"})
+        self.assertEqual(set(data), {"safe", "normal", "extra_minutes", "explanation", "left_out", "endpoint_reports"})
+        self.assertEqual(data["endpoint_reports"], {"origin": [], "destination": []})
         self.assertEqual(data["safe"]["hazards_avoided"], ["hz_demo_1"])
         self.assertEqual(data["normal"]["hazards_crossed"], ["hz_demo_1"])
         self.assertEqual(set(data["explanation"]), {"en", "es", "ht"})
@@ -74,9 +75,28 @@ class RouteApiTests(unittest.TestCase):
         with patch("api.routing.get_route", new_callable=AsyncMock, return_value=self.routes[0]) as get:
             data = self.client.post("/route", json=trip).json()
         self.assertEqual(data["left_out"], ["hz_demo_1"])
+        self.assertEqual(data["endpoint_reports"], {"origin": ["hz_demo_1"], "destination": []})
         self.assertEqual(data["safe"]["hazards_avoided"], [])
         self.assertNotIn("looks clear", data["explanation"]["en"])
         self.assertEqual(get.await_count, 1)
+
+    def test_destination_and_both_endpoint_warnings(self):
+        report = load_demo_hazards()[0]
+        point = {"lat": report["latitude"], "lng": report["longitude"]}
+        for origin_near in (False, True):
+            with self.subTest(origin_near=origin_near):
+                trip = {**TRIP, "destination": point}
+                if origin_near:
+                    trip["origin"] = point
+                with patch("api.routing.get_route", new_callable=AsyncMock, return_value=self.routes[0]):
+                    response = self.client.post("/route", json=trip)
+                self.assertEqual(response.status_code, 200)
+                data = response.json()
+                self.assertEqual(data["endpoint_reports"], {
+                    "origin": ["hz_demo_1"] if origin_near else [],
+                    "destination": ["hz_demo_1"],
+                })
+                self.assertEqual(data["left_out"], ["hz_demo_1"])
 
     def test_detour_inside_gap_is_rejected(self):
         with patch("api.routing.get_route", new_callable=AsyncMock, return_value=self.routes[0]):

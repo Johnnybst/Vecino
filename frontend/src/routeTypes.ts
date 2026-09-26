@@ -12,6 +12,7 @@ export type RouteResponse = {
   extra_minutes: number
   explanation: { en: string; es: string; ht: string }
   left_out: string[]
+  endpoint_reports?: { origin: string[]; destination: string[] }
 }
 
 export type RouteResult = { data: RouteResponse; hazards: Hazard[] }
@@ -41,4 +42,7 @@ export function isRouteResponse(value: unknown): value is RouteResponse {
     && typeof route.explanation?.es === 'string'
     && typeof route.explanation?.ht === 'string'
     && isIds(route.left_out)
+    && (route.endpoint_reports === undefined || (
+      !!route.endpoint_reports && isIds(route.endpoint_reports.origin)
+      && isIds(route.endpoint_reports.destination)))
 }

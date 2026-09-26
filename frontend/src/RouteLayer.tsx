@@ -45,6 +45,11 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
   }, [map, maps, core, route])
 
   const avoided = new Set(route.safe.hazards_avoided)
+  const nearStart = !!route.endpoint_reports?.origin.length
+  const nearDestination = !!route.endpoint_reports?.destination.length
+  const warningTitle = nearStart && nearDestination ? t.activityBoth
+    : nearStart ? t.activityStart
+    : nearDestination ? t.activityDestination : t.nearbyActivity
   const overlapping = JSON.stringify(route.safe.geometry.coordinates) === JSON.stringify(route.normal.geometry.coordinates)
 
   return (
@@ -56,6 +61,12 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
         </div>
       </div>
       <section className="demo-card route-card" aria-label={t.routeComparison}>
+        {route.left_out.length > 0 && (
+          <div className="route-warning" role="alert">
+            <strong>{warningTitle}</strong>
+            <p>{t.leftOut}</p>
+          </div>
+        )}
         <p className="demo-notice">{demoMode ? t.routeNotice : t.liveRouteNotice}</p>
         <h2>{t.routeHeadline(route.extra_minutes, avoided.size)}</h2>
         <p>{route.explanation[language]}</p>
@@ -63,9 +74,6 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
           {t.routeDetails(Math.ceil(route.safe.duration_s / 60), route.safe.distance_m / 1000)}
         </p>
         {overlapping && <p className="route-details">{t.samePath}</p>}
-        {route.left_out.length > 0 && (
-          <p className="route-details">{t.leftOut}</p>
-        )}
         <ul className="map-legend" aria-label={t.legend}>
           <li><span className="legend-detour" />{t.detour}</li>
           <li><span className="legend-normal" />{t.usualRoute}</li>

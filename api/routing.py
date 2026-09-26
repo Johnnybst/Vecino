@@ -158,11 +158,15 @@ async def _build_routes(origin, destination, profile, hazards, saved=None):
     outer_radius = radius / math.cos(math.pi / 24)
     active = [h for h in hazards if h["weight"] >= 0.1]
     left_out, usable = [], []
+    endpoint_reports = {"origin": [], "destination": []}
     for hazard in active:
         center = [hazard["longitude"], hazard["latitude"]]
         hazard = {**hazard, "center": center}
-        if any(clearance_m([point, point], center) <= outer_radius
-               for point in (origin, destination)):
+        nearby_endpoints = [name for name, point in (("origin", origin), ("destination", destination))
+                            if clearance_m([point, point], center) <= outer_radius]
+        for name in nearby_endpoints:
+            endpoint_reports[name].append(hazard["id"])
+        if nearby_endpoints:
             left_out.append(hazard["id"])
         else:
             usable.append(hazard)
@@ -229,6 +233,7 @@ async def _build_routes(origin, destination, profile, hazards, saved=None):
         "safe": {"geometry": detour["geometry"], **detour["properties"], "hazards_avoided": avoided},
         "normal": {"geometry": normal["geometry"], **normal["properties"], "hazards_crossed": crossed},
         "extra_minutes": extra, "explanation": explanation, "left_out": left_out,
+        "endpoint_reports": endpoint_reports,
     }
 
 
