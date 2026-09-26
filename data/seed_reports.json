@@ -1,0 +1,102 @@
+[
+  {
+    "id": 1,
+    "primary_location": "Little Havana",
+    "latitude": 25.7653,
+    "longitude": -80.2197,
+    "confidence_score": 0.85,
+    "source_count": 2,
+    "latest_report": "2026-09-26T14:00:00Z",
+    "synthetic": true
+  },
+  {
+    "id": 2,
+    "primary_location": "Hialeah",
+    "latitude": 25.8576,
+    "longitude": -80.2781,
+    "confidence_score": 0.75,
+    "source_count": 3,
+    "latest_report": "2026-09-26T13:50:00Z",
+    "synthetic": true
+  },
+  {
+    "id": 3,
+    "primary_location": "Doral",
+    "latitude": 25.8195,
+    "longitude": -80.3553,
+    "confidence_score": 0.9,
+    "source_count": 4,
+    "latest_report": "2026-09-26T13:40:00Z",
+    "synthetic": true
+  },
+  {
+    "id": 4,
+    "primary_location": "Allapattah",
+    "latitude": 25.8097,
+    "longitude": -80.223,
+    "confidence_score": 0.65,
+    "source_count": 2,
+    "latest_report": "2026-09-26T13:25:00Z",
+    "synthetic": true
+  },
+  {
+    "id": 5,
+    "primary_location": "Little Haiti",
+    "latitude": 25.8306,
+    "longitude": -80.191,
+    "confidence_score": 0.8,
+    "source_count": 3,
+    "latest_report": "2026-09-26T13:10:00Z",
+    "synthetic": true
+  },
+  {
+    "id": 6,
+    "primary_location": "Sweetwater",
+    "latitude": 25.7634,
+    "longitude": -80.3731,
+    "confidence_score": 0.7,
+    "source_count": 2,
+    "latest_report": "2026-09-26T12:50:00Z",
+    "synthetic": true
+  },
+  {
+    "id": 7,
+    "primary_location": "FIU, near SW 107th Avenue",
+    "latitude": 25.7562,
+    "longitude": -80.3673,
+    "confidence_score": 0.85,
+    "source_count": 3,
+    "latest_report": "2026-09-26T12:30:00Z",
+    "synthetic": true
+  },
+  {
+    "id": 8,
+    "primary_location": "Flagami",
+    "latitude": 25.7703,
+    "longitude": -80.307,
+    "confidence_score": 0.6,
+    "source_count": 1,
+    "latest_report": "2026-09-26T12:00:00Z",
+    "synthetic": true
+  },
+  {
+    "id": 9,
+    "primary_location": "West Little Havana",
+    "latitude": 25.765,
+    "longitude": -80.2405,
+    "confidence_score": 0.75,
+    "source_count": 2,
+    "latest_report": "2026-09-26T11:30:00Z",
+    "synthetic": true
+  },
+  {
+    "id": 10,
+    "primary_location": "West Hialeah",
+    "latitude": 25.867,
+    "longitude": -80.301,
+    "confidence_score": 0.5,
+    "source_count": 1,
+    "latest_report": "2026-09-26T11:00:00Z",
+    "synthetic": true
+  }
+]
