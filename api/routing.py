@@ -1,0 +1,214 @@
+"""Person 2, check-in 1: two real routes around one synthetic circle.
+
+Run with ``uv run python -m api.routing``. Only the fixed public demo trip
+is exported. The server uses build_routes without exporting user trips.
+"""
+
+import asyncio
+import json
+import math
+import os
+from pathlib import Path
+
+import httpx
+from dotenv import load_dotenv
+
+ROOT = Path(__file__).resolve().parents[1]
+PROFILES = {"driving-car", "foot-walking", "cycling-regular"}
+REPORT_RADIUS_M = 150
+# Demo spacing preference, not a verified safe distance.
+EXTRA_GAP_M = 300
+
+
+async def get_route(client, origin, destination, profile="driving-car", polygons=None):
+    """Request GeoJSON using [longitude, latitude] coordinates."""
+    if profile not in PROFILES:
+        raise ValueError("Choose driving-car, foot-walking, or cycling-regular.")
+    key = os.getenv("ORS_API_KEY", "").strip()
+    if not key or key == "paste_your_actual_key_here":
+        raise ValueError("Add your ORS_API_KEY to the root .env file.")
+    body = {"coordinates": [origin, destination]}
+    if polygons:
+        body["options"] = {
+            "avoid_polygons": {"type": "MultiPolygon", "coordinates": polygons}
+        }
+    response = await client.post(
+        f"https://api.openrouteservice.org/v2/directions/{profile}/geojson",
+        headers={"Authorization": key},
+        json=body,
+    )
+    response.raise_for_status()
+    feature = response.json()["features"][0]
+    # Keep only route geometry and summary, excluding provider metadata.
+    summary = feature["properties"]["summary"]
+    return {
+        "type": "Feature",
+        "geometry": feature["geometry"],
+        "properties": {
+            "duration_s": summary["duration"],
+            "distance_m": summary["distance"],
+        },
+    }
+
+
+def circle_ring(center, radius_m=REPORT_RADIUS_M):
+    """A closed 24-sided circle, 300 metres wide by default."""
+    lng, lat = center[:2]
+    ring = [
+        [
+            lng + radius_m * math.cos(i * math.tau / 24)
+            / (111320 * math.cos(math.radians(lat))),
+            lat + radius_m * math.sin(i * math.tau / 24) / 111320,
+        ]
+        for i in range(24)
+    ]
+    return ring + [ring[0][:]]
+
+
+def clearance_m(coordinates, center):
+    """Closest distance to any route segment, in local Miami metres."""
+    lng, lat = center[:2]
+    points = [
+        ((p[0] - lng) * 111320 * math.cos(math.radians(lat)),
+         (p[1] - lat) * 111320)
+        for p in coordinates
+    ]
+    closest = math.inf
+    for (ax, ay), (bx, by) in zip(points, points[1:]):
+        dx, dy = bx - ax, by - ay
+        length_sq = dx * dx + dy * dy
+        t = max(0, min(1, -(ax * dx + ay * dy) / length_sq)) if length_sq else 0
+        closest = min(closest, math.hypot(ax + t * dx, ay + t * dy))
+    return closest
+
+
+def load_demo_hazards():
+    """Temporary seed adapter until Person 1's hazards function is ready.
+
+    Treat the single starter report as ten minutes old on each load.
+    This intentionally does not substitute fake reports in live mode.
+    """
+    if os.getenv("DEMO_MODE", "false").lower() != "true":
+        raise ValueError("Live reports are not connected yet. Set DEMO_MODE=true.")
+    reports = json.loads((ROOT / "data" / "seed_reports.json").read_text())
+    return [
+        {**report, "weight": report["confidence"] * math.exp(-10 / 90)}
+        for report in reports
+        if report.get("synthetic") is True
+    ]
+
+
+def template_explanation(extra_minutes, report_count, left_out):
+    if report_count:
+        return {
+            "en": f"This route adds {extra_minutes} minutes and avoids {report_count} reported activity areas.",
+            "es": f"Esta ruta añade {extra_minutes} minutos y evita {report_count} zonas con actividad reportada.",
+            "ht": f"Wout sa a ajoute {extra_minutes} minit epi li evite {report_count} zòn kote yo rapòte aktivite.",
+        }
+    if left_out:
+        return {
+            "en": "Some reported areas are near your start or destination and could not be excluded.",
+            "es": "Algunas zonas reportadas están cerca del inicio o destino y no se pudieron excluir.",
+            "ht": "Gen zòn rapòte toupre depa oswa destinasyon ou ki pa t kapab eskli.",
+        }
+    return {
+        "en": "The usual route looks clear of the available reported activity areas.",
+        "es": "La ruta habitual parece libre de las zonas de actividad reportadas disponibles.",
+        "ht": "Wout nòmal la sanble pa pase nan zòn kote rapò ki disponib yo endike aktivite.",
+    }
+
+
+async def build_routes(origin, destination, profile, hazards):
+    """Build the team's response with a 300 m extra gap and no trip storage."""
+    radius = REPORT_RADIUS_M + EXTRA_GAP_M
+    # Match the circumscribed avoidance polygon when excluding endpoints.
+    outer_radius = radius / math.cos(math.pi / 24)
+    active = [h for h in hazards if h["weight"] >= 0.1]
+    left_out, usable = [], []
+    for hazard in active:
+        center = [hazard["longitude"], hazard["latitude"]]
+        hazard = {**hazard, "center": center}
+        if any(clearance_m([point, point], center) <= outer_radius
+               for point in (origin, destination)):
+            left_out.append(hazard["id"])
+        else:
+            usable.append(hazard)
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        normal = await get_route(client, origin, destination, profile)
+        line = normal["geometry"]["coordinates"]
+        crossed = [h["id"] for h in active if clearance_m(
+            line, [h["longitude"], h["latitude"]]) <= REPORT_RADIUS_M]
+        detour = normal
+        # Shared contract: keep the usual route when it crosses no report.
+        needs_detour = any(h["id"] in crossed for h in usable)
+        if needs_detour:
+            polygons = [[circle_ring(h["center"], outer_radius)] for h in usable]
+            detour = await get_route(client, origin, destination, profile, polygons)
+            if any(clearance_m(detour["geometry"]["coordinates"], h["center"]) < radius
+                   for h in usable):
+                raise ValueError("No route with the requested extra gap was found.")
+
+    avoided = [h["id"] for h in usable if h["id"] in crossed and clearance_m(
+        detour["geometry"]["coordinates"], h["center"]) >= radius]
+    extra = max(0, math.ceil((detour["properties"]["duration_s"]
+                             - normal["properties"]["duration_s"]) / 60))
+    explanation = template_explanation(extra, len(avoided), left_out)
+    return {
+        "safe": {"geometry": detour["geometry"], **detour["properties"], "hazards_avoided": avoided},
+        "normal": {"geometry": normal["geometry"], **normal["properties"], "hazards_crossed": crossed},
+        "extra_minutes": extra, "explanation": explanation, "left_out": left_out,
+    }
+
+
+async def demo():
+    load_dotenv(ROOT / ".env")
+    # Fixed FIU -> Little Havana example, never a user's trip.
+    origin, destination = [-80.374, 25.757], [-80.219, 25.766]
+    async with httpx.AsyncClient(timeout=30) as client:
+        normal = await get_route(client, origin, destination)
+        line = normal["geometry"]["coordinates"]
+        center = line[len(line) // 2][:2]
+        ring = circle_ring(center)
+        required_radius = REPORT_RADIUS_M + EXTRA_GAP_M
+        # Enclose the full 450 m radius even between the polygon's vertices.
+        avoid_ring = circle_ring(center, required_radius / math.cos(math.pi / 24))
+        detour = await get_route(client, origin, destination, polygons=[[avoid_ring]])
+
+    # Conservative verification against the enclosing circle, including segments.
+    clearance = clearance_m(detour["geometry"]["coordinates"], center)
+    if clearance < required_radius:
+        raise ValueError("The returned detour does not leave the requested gap.")
+    normal["properties"].update(name="Normal demo route", stroke="#808080", synthetic=True)
+    detour["properties"].update(name="Detour demo route", stroke="#16803c", synthetic=True)
+    circle = {
+        "type": "Feature",
+        "geometry": {"type": "Polygon", "coordinates": [ring]},
+        "properties": {
+            "name": "Synthetic report — demo only", "synthetic": True,
+            "stroke": "#bd4b4b", "fill": "#bd4b4b", "fill-opacity": 0.3,
+        },
+    }
+    output = ROOT / "data" / "route_check.geojson"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps({
+        "type": "FeatureCollection", "features": [normal, detour, circle]
+    }, indent=2) + "\n")
+    print("PASS: normal route crosses the fake circle; detour goes around it.")
+    print(f"Closest gap beyond red circle: {clearance - REPORT_RADIUS_M:.0f} metres "
+          f"(requested: {EXTRA_GAP_M} metres).")
+    for route in (normal, detour):
+        props = route["properties"]
+        print(f"{props['name']}: {props['duration_s'] / 60:.1f} minutes")
+    print("Map file: data/route_check.geojson")
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(demo())
+    except httpx.HTTPStatusError as exc:
+        raise SystemExit(f"Route service returned HTTP {exc.response.status_code}.") from None
+    except httpx.RequestError:
+        raise SystemExit("Could not reach the route service. Check your connection and retry.") from None
+    except (ValueError, KeyError, IndexError):
+        raise SystemExit("Route check failed. Check your key and the service response format.") from None

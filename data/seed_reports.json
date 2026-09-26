@@ -1,0 +1,11 @@
+[
+  {
+    "id": "hz_demo_1",
+    "summary": "1 synthetic report near Dolphin Expressway — demo only",
+    "latitude": 25.783096,
+    "longitude": -80.272383,
+    "confidence": 0.8,
+    "report_count": 1,
+    "synthetic": true
+  }
+]
