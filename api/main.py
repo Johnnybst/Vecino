@@ -11,13 +11,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from api.hazards import get_demo_hazards
+from api.hazards import get_hazards
 from api.routing import ROOT, build_routes, load_demo_hazards
 
 load_dotenv(ROOT / ".env")
 app = FastAPI(
-    title="Vecino route demo",
-    description="Uses synthetic reports from the shared hazards function. Routes are not a safety guarantee.",
+    title="Vecino routes",
+    description="Uses demo or live reports from the shared hazards function. Routes are not a safety guarantee.",
     swagger_ui_parameters={"persistAuthorization": False},
 )
 app.add_middleware(
@@ -59,7 +59,7 @@ async def invalid_request(request, exc):
     })
 
 
-@app.post("/route", summary="Get two routes using the shared demo reports")
+@app.post("/route", summary="Get two routes using the shared reports")
 async def route(trip: RouteRequest):
     try:
         hazards = load_demo_hazards()
@@ -84,4 +84,7 @@ def hazards(at: datetime | None = None):
             detail="Include a timezone in 'at', such as Z for UTC.",
         )
 
-    return get_demo_hazards(at=at)
+    try:
+        return get_hazards(at=at)
+    except (OSError, ValueError, KeyError):
+        raise HTTPException(503, "Reports unavailable. Check the report source and database settings.") from None

@@ -25,7 +25,7 @@ class RouteApiTests(unittest.TestCase):
         self.client = TestClient(app)
         features = json.loads((ROOT / "data/route_check.geojson").read_text())["features"]
         # Keep route scenarios independent of Person 1's evolving demo locations.
-        self.hazards = patch("api.routing.get_demo_hazards", return_value={
+        self.hazards = patch("api.routing.get_hazards", return_value={
             "features": [{"geometry": features[2]["geometry"], "properties": {
                 "id": "hz_demo_1", "confidence": 0.8, "weight": 0.7,
                 "report_count": 1,
@@ -100,6 +100,8 @@ class RouteApiTests(unittest.TestCase):
 
     def test_live_mode_does_not_use_fake_reports(self):
         with patch.dict(os.environ, {"DEMO_MODE": "false"}), patch(
+            "api.routing.get_hazards", side_effect=OSError("Database unavailable")
+        ), patch(
             "api.routing.get_route", new_callable=AsyncMock
         ) as get:
             response = self.client.post("/route", json=TRIP)

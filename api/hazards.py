@@ -1,16 +1,48 @@
 import math
 import json
+import os
+import sqlite3
+from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-SEED_FILE = Path(__file__).resolve().parent.parent / "data" / "seed_reports.json"
+ROOT = Path(__file__).resolve().parent.parent
+SEED_FILE = ROOT / "data" / "seed_reports.json"
 
 # Keep demo dates steady while the server runs, so circles can fade.
 DEMO_STARTED_AT = datetime.now(timezone.utc)
 
 
 def parse_time(value):
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    # Older collector timestamps without an offset are also stored in UTC.
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
+
+
+def load_live_reports(at=None):
+    """Read recent clusters without creating or changing the collector database."""
+    current_time = at if at is not None else datetime.now(timezone.utc)
+    cutoff = current_time - timedelta(hours=6)
+    db_path = Path(os.getenv("DB_PATH", "ice_monitor.db")).expanduser()
+    if not db_path.is_absolute():
+        db_path = ROOT / db_path
+
+    try:
+        with closing(sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True)) as db:
+            db.row_factory = sqlite3.Row
+            rows = db.execute(
+                """SELECT id, primary_location, latitude, longitude,
+                          confidence_score, source_count, latest_report
+                   FROM clusters
+                   WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+                     AND julianday(latest_report) >= julianday(?)
+                     AND julianday(latest_report) <= julianday(?)
+                   ORDER BY julianday(latest_report) DESC""",
+                (cutoff.isoformat(), current_time.isoformat()),
+            ).fetchall()
+            return [dict(row) for row in rows]
+    except sqlite3.Error as exc:
+        raise OSError("Live reports are unavailable. Check DB_PATH and the collector database.") from exc
 
 
 def load_demo_reports():
@@ -52,11 +84,11 @@ def make_circle(latitude, longitude, radius_m=150, points=20):
         "type": "Polygon",
         "coordinates": [coordinates],
     }
-def get_demo_hazards(at=None):
+def reports_to_hazards(reports, at=None):
     current_time = at if at is not None else datetime.now(timezone.utc)
     features = []
 
-    for report in load_demo_reports():
+    for report in reports:
         reported_at = parse_time(report["latest_report"])
 
         # Don't show reports that haven't happened at the selected time.
@@ -84,7 +116,7 @@ def get_demo_hazards(at=None):
             "properties": {
                 "id": f"hz_{report['id']}",
                 "summary": f"{count} reports near {report['primary_location']}",
-                "reported_at": report["latest_report"],
+                "reported_at": reported_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "confidence": confidence,
                 "report_count": count,
                 "weight": weight,
@@ -95,3 +127,15 @@ def get_demo_hazards(at=None):
         "type": "FeatureCollection",
         "features": features,
     }
+
+
+def get_demo_hazards(at=None):
+    return reports_to_hazards(load_demo_reports(), at=at)
+
+
+def get_hazards(at=None):
+    """Shared source for the map and routing; live mode never uses fake data."""
+    current_time = at if at is not None else datetime.now(timezone.utc)
+    if os.getenv("DEMO_MODE", "false").strip().lower() == "true":
+        return get_demo_hazards(at=current_time)
+    return reports_to_hazards(load_live_reports(at=current_time), at=current_time)

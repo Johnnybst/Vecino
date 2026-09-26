@@ -12,7 +12,7 @@ from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
-from api.hazards import get_demo_hazards
+from api.hazards import get_hazards
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILES = {"driving-car", "foot-walking", "cycling-regular"}
@@ -84,11 +84,9 @@ def clearance_m(coordinates, center):
 
 
 def load_demo_hazards():
-    """Use Person 1's circles and fading weights directly, without HTTP."""
-    if os.getenv("DEMO_MODE", "false").lower() != "true":
-        raise ValueError("Live reports are not connected yet. Set DEMO_MODE=true.")
+    """Load shared demo or live circles; keep this name for existing callers."""
     hazards = []
-    for feature in get_demo_hazards()["features"]:
+    for feature in get_hazards()["features"]:
         ring = feature["geometry"]["coordinates"][0][:-1]
         hazards.append({
             **feature["properties"],
