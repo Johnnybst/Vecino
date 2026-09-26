@@ -1,6 +1,7 @@
 """Local route server. Start: uv run uvicorn api.main:app --reload --port 8000."""
 
 from datetime import datetime
+import os
 from typing import Literal
 
 import httpx
@@ -22,7 +23,11 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        origin.strip().rstrip("/")
+        for origin in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+        if origin.strip()
+    ],
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
