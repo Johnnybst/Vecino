@@ -12,6 +12,7 @@ from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
+from api.hazards import get_demo_hazards
 
 ROOT = Path(__file__).resolve().parents[1]
 PROFILES = {"driving-car", "foot-walking", "cycling-regular"}
@@ -83,19 +84,18 @@ def clearance_m(coordinates, center):
 
 
 def load_demo_hazards():
-    """Temporary seed adapter until Person 1's hazards function is ready.
-
-    Treat the single starter report as ten minutes old on each load.
-    This intentionally does not substitute fake reports in live mode.
-    """
+    """Use Person 1's circles and fading weights directly, without HTTP."""
     if os.getenv("DEMO_MODE", "false").lower() != "true":
         raise ValueError("Live reports are not connected yet. Set DEMO_MODE=true.")
-    reports = json.loads((ROOT / "data" / "seed_reports.json").read_text())
-    return [
-        {**report, "weight": report["confidence"] * math.exp(-10 / 90)}
-        for report in reports
-        if report.get("synthetic") is True
-    ]
+    hazards = []
+    for feature in get_demo_hazards()["features"]:
+        ring = feature["geometry"]["coordinates"][0][:-1]
+        hazards.append({
+            **feature["properties"],
+            "longitude": sum(p[0] for p in ring) / len(ring),
+            "latitude": sum(p[1] for p in ring) / len(ring),
+        })
+    return hazards
 
 
 def template_explanation(extra_minutes, report_count, left_out):

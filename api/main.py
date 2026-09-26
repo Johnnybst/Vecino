@@ -1,6 +1,6 @@
-<<<<<<< HEAD
 """Local route server. Start: uv run uvicorn api.main:app --reload --port 8000."""
 
+from datetime import datetime
 from typing import Literal
 
 import httpx
@@ -11,38 +11,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
+from api.hazards import get_demo_hazards
 from api.routing import ROOT, build_routes, load_demo_hazards
 
 load_dotenv(ROOT / ".env")
 app = FastAPI(
     title="Vecino route demo",
-    description="Uses one synthetic report until Person 1's reports are connected. Routes are not a safety guarantee.",
+    description="Uses synthetic reports from the shared hazards function. Routes are not a safety guarantee.",
     swagger_ui_parameters={"persistAuthorization": False},
 )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
-    allow_methods=["POST"],
-=======
-from datetime import datetime
-
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-
-from api.hazards import get_demo_hazards
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
     allow_methods=["GET", "POST"],
->>>>>>> 4e4c899badec12376859cad5e42169b4806d2141
     allow_headers=["Content-Type"],
 )
 
 
-<<<<<<< HEAD
 class Point(BaseModel):
     lat: float = Field(ge=-90, le=90, allow_inf_nan=False)
     lng: float = Field(ge=-180, le=180, allow_inf_nan=False)
@@ -74,7 +59,7 @@ async def invalid_request(request, exc):
     })
 
 
-@app.post("/route", summary="Get two routes using the synthetic demo report")
+@app.post("/route", summary="Get two routes using the shared demo reports")
 async def route(trip: RouteRequest):
     try:
         hazards = load_demo_hazards()
@@ -91,7 +76,6 @@ async def route(trip: RouteRequest):
         raise HTTPException(503, "Directions service is unavailable. Please retry.") from None
     except (ValueError, KeyError, IndexError, OSError):
         raise HTTPException(503, "Route unavailable. Check demo settings, seed data, and the requested trip.") from None
-=======
 @app.get("/hazards")
 def hazards(at: datetime | None = None):
     if at is not None and at.tzinfo is None:
@@ -101,4 +85,3 @@ def hazards(at: datetime | None = None):
         )
 
     return get_demo_hazards(at=at)
->>>>>>> 4e4c899badec12376859cad5e42169b4806d2141

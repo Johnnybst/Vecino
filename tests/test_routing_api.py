@@ -24,6 +24,15 @@ class RouteApiTests(unittest.TestCase):
         self.addCleanup(self.env.stop)
         self.client = TestClient(app)
         features = json.loads((ROOT / "data/route_check.geojson").read_text())["features"]
+        # Keep route scenarios independent of Person 1's evolving demo locations.
+        self.hazards = patch("api.routing.get_demo_hazards", return_value={
+            "features": [{"geometry": features[2]["geometry"], "properties": {
+                "id": "hz_demo_1", "confidence": 0.8, "weight": 0.7,
+                "report_count": 1,
+            }}]
+        })
+        self.hazards.start()
+        self.addCleanup(self.hazards.stop)
         self.routes = [{"geometry": f["geometry"], "properties": {
             key: f["properties"][key] for key in ("duration_s", "distance_m")
         }} for f in features[:2]]
