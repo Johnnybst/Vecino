@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { reportSummary, useI18n } from './i18n'
 import { demoMode } from './config'
 import { reportColor, reportSeverity, severitySymbols } from './reportStyle'
 import type { Severity } from './reportStyle'
+import { MapGeometry } from './MapGeometry'
 
 export type Hazard = {
   type: 'Feature'
@@ -108,9 +109,11 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
         map,
         paths: feature.geometry.coordinates.map((ring) => ring.map(([lng, lat]) => ({ lat, lng }))),
         fillColor: reportColor(feature.properties, updatedAt),
-        fillOpacity: 0.15 + 0.45 * feature.properties.weight,
+        // Keep Google's polygon as the click target; SVG supplies the CSS fade.
+        fillOpacity: 0,
         strokeColor: reportColor(feature.properties, updatedAt),
         strokeWeight: 2,
+        strokeOpacity: 0,
         zIndex: 1,
       })
       const listener = circle.addListener('click', () => setSelectedId(feature.properties.id))
@@ -122,6 +125,13 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
     })
   }, [map, maps, hazards, updatedAt])
 
+  const shapes = useMemo(() => hazards.map((feature) => ({
+    id: feature.properties.id,
+    rings: feature.geometry.coordinates,
+    color: reportColor(feature.properties, updatedAt),
+    fillOpacity: 0.15 + 0.45 * feature.properties.weight,
+  })), [hazards, updatedAt])
+
   const selected = hazards.find((feature) => feature.properties.id === selectedId)
   const ring = selected?.geometry.coordinates[0].slice(0, -1)
   const position = ring && {
@@ -131,6 +141,7 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
 
   return (
     <>
+      <MapGeometry shapes={shapes} polygons />
       <p className={`hazards-status${hideStatus ? ' with-route' : ''}${preview ? ' fade-status' : ''}`} role="status" hidden={hideStatus && status === 'ready'}>
         {status === 'loading' && (demoMode ? t.loadingReports : t.loadingLiveReports)}
         {status === 'ready' && (preview ? t.previewReportStatus(hazards.length)

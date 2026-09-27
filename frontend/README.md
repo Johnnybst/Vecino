@@ -30,6 +30,12 @@ npm.cmd run lint
 
 At 390 x 844, check English, Spanish and Haitian Creole controls, route cards, circle popups and the demo time slider. Switching languages uses the existing server explanation and does not send another route request.
 
+The demo slider sits above the route card on the main map. It previews report fading without recalculating routes; starting or editing a trip resets it to now. Report polygons use the server's geometry so their sizes match routing. Severity colors turn gray with age, and circles below weight 0.1 disappear.
+
+Traffic and Road incidents are off by default. Road incidents load from `/incidents` every five minutes while enabled; their icons do not change routes. Missing or empty incident data does not mean roads are clear. All interface labels have English, Spanish and Haitian Creole versions; incoming incident descriptions stay as provided by the source.
+
+Address suggestions are restricted to the agreed Miami-Dade box. Out-of-area trips show a translated message. Route cards show km and mi, and use `has_detour` to choose between Detour and Usual route (with a geometry comparison for older servers). Start and destination have pin/flag symbols. Map and card animations last under 300 ms and are disabled for reduced motion.
+
 ## Hosting handoff
 
 For Vercel, use `frontend` as the root directory, the Vite preset, `npm run build`, and output directory `dist`. Set the three frontend environment variables there; `VITE_API_URL` must be the hosted HTTPS server address, not localhost. Person 1 must allow the frontend domain in the server's CORS settings. ORS and Gemini keys belong only on the server, never in `VITE_` variables.

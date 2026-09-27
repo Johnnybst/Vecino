@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import type { RouteResult } from './routeTypes'
 import { useI18n } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
 import { TripMarkers } from './TripMarkers'
+import { MapGeometry } from './MapGeometry'
 import { demoMode } from './config'
 
 export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: () => void }) {
@@ -18,34 +19,17 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
   useEffect(() => {
     if (!map || !maps || !core) return
     const toPoint = ([lng, lat]: [number, number]) => ({ lat, lng })
-    const normal = hasDetour ? new maps.Polyline({
-      map,
-      path: route.normal.geometry.coordinates.map(toPoint),
-      strokeOpacity: 0,
-      icons: [{
-        icon: { path: 'M 0,-1 0,1', strokeColor: '#606971', strokeOpacity: 1, strokeWeight: 4, scale: 3 },
-        offset: '0', repeat: '18px',
-      }],
-      clickable: false,
-      zIndex: 3,
-    }) : null
-    const safe = new maps.Polyline({
-      map,
-      path: route.safe.geometry.coordinates.map(toPoint),
-      strokeColor: '#24764c', strokeOpacity: 1, strokeWeight: 6,
-      clickable: false,
-      zIndex: 2,
-    })
     const bounds = new core.LatLngBounds()
     for (const line of [route.safe, route.normal]) {
       line.geometry.coordinates.forEach((point) => bounds.extend(toPoint(point)))
     }
     map.fitBounds(bounds, { top: 135, right: 40, bottom: Math.min(460, map.getDiv().clientHeight * 0.58), left: 40 })
-    return () => {
-      normal?.setMap(null)
-      safe.setMap(null)
-    }
   }, [map, maps, core, route, hasDetour])
+
+  const shapes = useMemo(() => [
+    { id: 'safe', rings: [route.safe.geometry.coordinates], color: '#24764c' },
+    ...(hasDetour ? [{ id: 'normal', rings: [route.normal.geometry.coordinates], color: '#606971', dashed: true }] : []),
+  ], [route, hasDetour])
 
   const avoided = new Set(route.safe.hazards_avoided)
   const nearStart = !!route.endpoint_reports?.origin.length
@@ -56,6 +40,7 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
 
   return (
     <>
+      <MapGeometry shapes={shapes} />
       <TripMarkers coordinates={route.safe.geometry.coordinates} />
       <div className="demo-heading">
         <strong>Vecino · {t.yourRoutes}</strong>
