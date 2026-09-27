@@ -110,7 +110,8 @@ class LiveHazardsTests(unittest.TestCase):
         with patch("api.main.build_routes", new_callable=AsyncMock, return_value={}) as build:
             response = client.post("/route", json={
                 "origin": {"lat": 25.7, "lng": -80.3},
-                "destination": {"lat": 25.9, "lng": -80.1},
+                # Inside the Miami-Dade box (-80.1 is in the ocean and now gets outside_area).
+                "destination": {"lat": 25.9, "lng": -80.15},
             })
         self.assertEqual(response.status_code, 200)
         self.assertEqual([h["id"] for h in build.call_args.args[3]], ["hz_1"])
