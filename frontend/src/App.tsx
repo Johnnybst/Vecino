@@ -15,6 +15,8 @@ import type { ThemeChoice } from './theme'
 import { TrafficLayer } from './TrafficLayer'
 import { MapControls } from './MapControls'
 import { FollowMe } from './FollowMe'
+import { ArrivalScreen } from './ArrivalScreen'
+import type { TripSummary } from './ArrivalScreen'
 import { RouteLoading } from './RouteLoading'
 import { askCompassPermission } from './compass'
 import { mapId } from './config'
@@ -305,6 +307,10 @@ function App() {
   const [progress, setProgress] = useState<Progress | null>(null)
   // A started trip: close-up view that follows you (the overview comes back on End trip).
   const [navigating, setNavigating] = useState(false)
+  const [tripStartedAt, setTripStartedAt] = useState(0)
+  const [arrived, setArrived] = useState<TripSummary | null>(null)
+  // Bumped after arriving so the address boxes start empty again (Follow me stays as it was).
+  const [panelKey, setPanelKey] = useState(0)
 
   // "New route from here": same destination and travel mode, starting at the blue dot.
   async function recalculate(from: Coordinates): Promise<TextKey | ''> {
@@ -367,13 +373,17 @@ function App() {
         />{!showDemo && <FollowMe route={route?.data.safe} onProgress={setProgress}
           onRecalculate={route && trip ? recalculate : undefined}
           navigating={navigating && !!route} onEnd={() => { setNavigating(false); setProgress(null) }}
-          profile={trip?.profile} onArrive={() => { setNavigating(false); setProgress(null) }} />}</div>
+          profile={trip?.profile} onArrive={() => {
+            setNavigating(false); setProgress(null)
+            setArrived({ minutes: Math.max(1, Math.round((Date.now() - tripStartedAt) / 60000)),
+              distance_m: route?.data.safe.distance_m ?? 0, avoided: route?.data.safe.hazards_avoided.length ?? 0 })
+          }} />}</div>
         <section className="vecino-panel" hidden={showDemo} aria-label={t.chooseTrip}>
           <div className="panel-title"><h1>Vecino</h1>
             <div className="heading-controls"><ThemeToggle choice={themeChoice} onChange={(choice) => { setClock(new Date()); setThemeChoice(choice) }} /><LanguageSelect /></div>
           </div>
           <div hidden={route !== null}>
-            <AddressPanel onShowDemo={() => setShowDemo(true)} onRoute={(result, nextTrip) => {
+            <AddressPanel key={panelKey} onShowDemo={() => setShowDemo(true)} onRoute={(result, nextTrip) => {
               setHistory(false); setMinutes(0); setPreviewAt(undefined); setRoute(result); setTrip(nextTrip); setProgress(null); setNavigating(false)
             }} hazards={hazards} />
           </div>
@@ -392,7 +402,11 @@ function App() {
         {showDemo && <DemoMap onClose={() => setShowDemo(false)} />}
         <TrafficLayer enabled={traffic && !showDemo} />
         {route && !showDemo && <RouteLayer result={route} progress={progress} navigating={navigating}
-          onStart={() => { void askCompassPermission(); setNavigating(true) }} />}
+          onStart={() => { void askCompassPermission(); setTripStartedAt(Date.now()); setNavigating(true) }} />}
+        {arrived && <ArrivalScreen summary={arrived} onDone={() => {
+          setArrived(null); setRoute(null); setTrip(null); setProgress(null); setNavigating(false)
+          setHistory(false); setMinutes(0); setPreviewAt(undefined); setPanelKey((key) => key + 1)
+        }} />}
       </APIProvider>
     </main>
     </I18nContext.Provider>
