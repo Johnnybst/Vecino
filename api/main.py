@@ -11,7 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
-# a change or sumn.
+
 from api.hazards import get_hazards
 from api.incidents import get_incidents, inside_miami_dade
 from api.routing import ROOT, build_routes, load_demo_hazards
