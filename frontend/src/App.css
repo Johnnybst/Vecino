@@ -602,3 +602,19 @@
 :root[data-theme='dark'] .arrival-card { background: #1c2420; color: #e3ece6; }
 :root[data-theme='dark'] .arrival-card p { color: #a9b9af; }
 @media (prefers-reduced-motion: reduce) { .arrival-card { animation: none; } }
+
+/* Serif wordmark inspired by the supplied brand image. */
+.vecino-brand {
+  display: inline-flex;
+  align-items: flex-start;
+  color: #123f32;
+  white-space: nowrap;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+.vecino-brand img { width: 28px; height: 35px; margin: -3px 0 0 3px; }
+:root[data-theme='dark'] .vecino-brand { color: #d7eee2; }
+.panel-title { flex-wrap: wrap; row-gap: 8px; }

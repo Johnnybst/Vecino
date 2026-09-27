@@ -1,3 +1,4 @@
+import { Brand } from './Brand'
 import { useEffect, useRef, useState } from 'react'
 import { APIProvider, Map, useMapsLibrary } from '@vis.gl/react-google-maps'
 import './App.css'
@@ -347,7 +348,7 @@ function App() {
   if (!apiKey) {
     return (
       <main className="setup-message">
-        <h1>Vecino</h1>
+        <h1><Brand /></h1>
         <p>{t.missingKey}</p>
       </main>
     )
@@ -379,7 +380,7 @@ function App() {
               distance_m: route?.data.safe.distance_m ?? 0, avoided: route?.data.safe.hazards_avoided.length ?? 0 })
           }} />}</div>
         <section className="vecino-panel" hidden={showDemo} aria-label={t.chooseTrip}>
-          <div className="panel-title"><h1>Vecino</h1>
+          <div className="panel-title"><h1><Brand /></h1>
             <div className="heading-controls"><ThemeToggle choice={themeChoice} onChange={(choice) => { setClock(new Date()); setThemeChoice(choice) }} /><LanguageSelect /></div>
           </div>
           <div hidden={route !== null}>
