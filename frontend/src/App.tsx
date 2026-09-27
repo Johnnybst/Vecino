@@ -10,9 +10,13 @@ import type { RouteResult } from './routeTypes'
 import { I18nContext, messages, useI18n } from './i18n'
 import type { Language, TextKey } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
-import { FadePreview } from './FadePreview'
+import { TimeSlider } from './TimeSlider'
 
 import { demoMode } from './config'
+
+const ignorePreviewReports = () => {}
+const coverage = { south: 25.13, north: 25.98, west: -80.88, east: -80.11 }
+const insideCoverage = ({ lat, lng }: Coordinates) => lat >= coverage.south && lat <= coverage.north && lng >= coverage.west && lng <= coverage.east
 
 type Coordinates = { lat: number; lng: number }
 const travelModes = [
@@ -36,7 +40,7 @@ function AddressInput({ kind, onSelect }: {
 
     const input = new places.PlaceAutocompleteElement({
       includedRegionCodes: ['us'],
-      locationBias: { center: { lat: 25.7617, lng: -80.1918 }, radius: 50000 },
+      locationRestriction: coverage,
     })
     widget.current = input
     container.current.appendChild(input)
@@ -102,9 +106,8 @@ function AddressInput({ kind, onSelect }: {
   )
 }
 
-function AddressPanel({ onShowDemo, onShowFade, onRoute, hazards }: {
+function AddressPanel({ onShowDemo, onRoute, hazards }: {
   onShowDemo: () => void
-  onShowFade: () => void
   onRoute: (result: RouteResult) => void
   hazards: Hazard[]
 }) {
@@ -126,6 +129,10 @@ function AddressPanel({ onShowDemo, onShowFade, onRoute, hazards }: {
 
   async function findRoutes() {
     if (!origin || !destination || routeRequest.current) return
+    if (!insideCoverage(origin) || !insideCoverage(destination)) {
+      setRouteError('outsideArea')
+      return
+    }
     const controller = new AbortController()
     routeRequest.current = controller
     setLoadingRoute(true)
@@ -142,8 +149,9 @@ function AddressPanel({ onShowDemo, onShowFade, onRoute, hazards }: {
         signal: controller.signal,
       })
       if (!response.ok) {
+        const error = await response.json().catch(() => null)
         setRouteError(response.status === 422
-          ? 'reselectAddresses'
+          ? error?.detail === 'outside_area' ? 'outsideArea' : 'reselectAddresses'
           : 'routesUnavailable')
         return
       }
@@ -256,9 +264,6 @@ function AddressPanel({ onShowDemo, onShowFade, onRoute, hazards }: {
       <button type="button" className="location-button sample-link" onClick={onShowDemo} disabled={loadingRoute}>
         {t.showSample}
       </button>
-      {demoMode && <button type="button" className="location-button sample-link" onClick={onShowFade} disabled={loadingRoute}>
-        {t.showFade}
-      </button>}
     </section>
   )
 }
@@ -266,7 +271,12 @@ function AddressPanel({ onShowDemo, onShowFade, onRoute, hazards }: {
 function App() {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY
   const [showDemo, setShowDemo] = useState(false)
-  const [showFade, setShowFade] = useState(false)
+  const [minutes, setMinutes] = useState(0)
+  const [previewAt, setPreviewAt] = useState<string | undefined>()
+  useEffect(() => {
+    const timer = setTimeout(() => setPreviewAt(minutes ? new Date(Date.now() + minutes * 60000).toISOString() : undefined), 250)
+    return () => clearTimeout(timer)
+  }, [minutes])
   const [hazards, setHazards] = useState<Hazard[]>([])
   const [route, setRoute] = useState<RouteResult | null>(null)
   const [language, setLanguage] = useState<Language>('en')
@@ -285,7 +295,7 @@ function App() {
 
   return (
     <I18nContext.Provider value={{ language, setLanguage }}>
-    <main className="map-screen" aria-label={t.mapLabel}>
+    <main className={`map-screen${!showDemo ? ' main-map' : ''}${route ? ' has-route' : ''}`} aria-label={t.mapLabel}>
       <APIProvider apiKey={apiKey}>
         <Map
           style={{ width: '100%', height: '100%' }}
@@ -296,13 +306,16 @@ function App() {
           streetViewControl={false}
           fullscreenControl={false}
         />
-        <div hidden={showDemo || showFade || route !== null}>
-          <AddressPanel onShowDemo={() => setShowDemo(true)} onShowFade={() => setShowFade(true)} onRoute={setRoute} hazards={hazards} />
+        <div hidden={showDemo || route !== null}>
+          <AddressPanel onShowDemo={() => setShowDemo(true)} onRoute={(result) => { setMinutes(0); setPreviewAt(undefined); setRoute(result) }} hazards={hazards} />
         </div>
         {showDemo && <DemoMap onClose={() => setShowDemo(false)} />}
-        {!showDemo && !showFade && <HazardsLayer onHazardsChange={setHazards} hideStatus={route !== null} />}
-        {route && !showDemo && !showFade && <RouteLayer result={route} onEdit={() => setRoute(null)} />}
-        {demoMode && showFade && <FadePreview onClose={() => setShowFade(false)} />}
+        {!showDemo && <HazardsLayer key={previewAt ?? 'now'} at={previewAt}
+          onHazardsChange={previewAt ? ignorePreviewReports : setHazards} hideStatus={route !== null} />}
+        {!showDemo && <div className="bottom-stack">
+          {demoMode && <TimeSlider minutes={minutes} onChange={setMinutes} />}
+          {route && <RouteLayer result={route} onEdit={() => { setRoute(null); setMinutes(0); setPreviewAt(undefined) }} />}
+        </div>}
       </APIProvider>
     </main>
     </I18nContext.Provider>

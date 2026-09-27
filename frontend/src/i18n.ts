@@ -4,6 +4,7 @@ export type Language = 'en' | 'es' | 'ht'
 export const languageNames: Record<Language, string> = { en: 'English', es: 'Español', ht: 'Kreyòl' }
 
 const en = {
+  outsideArea: 'Vecino covers Miami-Dade only.', previewOnly: 'Demo time changes reports only. Routes stay as requested.',
   loadingLiveReports: 'Loading reports...', liveRouteNotice: 'Routes based on reported activity',
   liveReportsStatus: (n: number) => `Reported activity: ${n} ${n === 1 ? 'area' : 'areas'}. Refreshes every minute.`,
   showFade: 'Watch reports fade', fadePreview: 'Report fading demo', demoTime: 'Move time forward',
@@ -61,6 +62,7 @@ type Messages = typeof en
 export type TextKey = { [K in keyof Messages]: Messages[K] extends string ? K : never }[keyof Messages]
 
 const es: Messages = {
+  outsideArea: 'Vecino solo cubre Miami-Dade.', previewOnly: 'El tiempo de demostración solo cambia los reportes, no las rutas.',
   loadingLiveReports: 'Cargando reportes...', liveRouteNotice: 'Rutas basadas en actividad reportada',
   liveReportsStatus: (n) => `Actividad reportada: ${n} ${n === 1 ? 'zona' : 'zonas'}. Se actualiza cada minuto.`,
   showFade: 'Ver cómo se atenúan los reportes', fadePreview: 'Demostración del paso del tiempo', demoTime: 'Adelantar el tiempo',
@@ -115,6 +117,7 @@ const es: Messages = {
 }
 
 const ht: Messages = {
+  outsideArea: 'Vecino kouvri Miami-Dade sèlman.', previewOnly: 'Tan demonstrasyon an chanje rapò yo sèlman, pa wout yo.',
   loadingLiveReports: 'N ap chaje rapò yo...', liveRouteNotice: 'Wout ki baze sou aktivite rapòte',
   liveReportsStatus: (n) => `Aktivite rapòte: ${n} zòn. Yo mete ajou chak minit.`,
   showFade: 'Gade rapò yo vin pal', fadePreview: 'Demonstrasyon rapò k ap fennen', demoTime: 'Avanse tan an',
