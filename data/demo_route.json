@@ -256,32 +256,20 @@
           25.768668
         ],
         [
-          -80.214507,
-          25.768392
+          -80.213746,
+          25.768695
         ],
         [
-          -80.214494,
-          25.767707
+          -80.212831,
+          25.768723
         ],
         [
-          -80.214469,
-          25.766743
+          -80.212808,
+          25.767756
         ],
         [
-          -80.214459,
-          25.766441
-        ],
-        [
-          -80.214442,
-          25.765861
-        ],
-        [
-          -80.213825,
-          25.765877
-        ],
-        [
-          -80.213413,
-          25.765889
+          -80.212777,
+          25.76679
         ],
         [
           -80.212753,
@@ -341,8 +329,8 @@
         ]
       ]
     },
-    "duration_s": 428.7,
-    "distance_m": 3932.5,
+    "duration_s": 467.8,
+    "distance_m": 3933.0,
     "hazards_avoided": [
       "hz_1"
     ]
@@ -656,11 +644,11 @@
     ]
   },
   "has_detour": true,
-  "extra_minutes": 4,
+  "extra_minutes": 5,
   "explanation": {
-    "en": "This route takes 4 extra minutes and avoids 1 area with reported activity near Little Havana.",
-    "es": "Esta ruta toma 4 minutos adicionales y evita 1 zona con actividad reportada cerca de Little Havana.",
-    "ht": "Wout sa a pran 4 minit anplis epi li evite 1 z\u00f2n ki gen aktivite rap\u00f2te toupre Little Havana."
+    "en": "This route adds 5 minutes and avoids 1 area with reported activity near Little Havana.",
+    "es": "Esta ruta a\u00f1ade 5 minutos y evita 1 zona con actividad reportada cerca de Little Havana.",
+    "ht": "Wout sa a ajoute 5 minit epi li evite 1 z\u00f2n ki gen aktivite rap\u00f2te toupre Little Havana."
   },
   "left_out": [],
   "endpoint_reports": {

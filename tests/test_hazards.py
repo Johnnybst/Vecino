@@ -10,8 +10,34 @@ from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
-from api.hazards import get_hazards, load_live_reports
+from api.hazards import get_hazards, load_live_reports, reports_to_hazards
 from api.main import app
+
+
+class SeverityTests(unittest.TestCase):
+    def test_severity_properties_match_drawn_radius(self):
+        now = datetime.now(timezone.utc)
+        for count, confidence, severity, radius in (
+            (1, 0.65, "low", 150),
+            (2, 0.65, "medium", 200),
+            (3, 0.84, "medium", 200),
+            (4, 0.65, "high", 250),
+            (1, 0.85, "high", 250),
+        ):
+            with self.subTest(count=count, confidence=confidence):
+                report = {
+                    "id": 1, "primary_location": "Test location",
+                    "latitude": 25.8, "longitude": -80.2,
+                    "source_count": count, "confidence_score": confidence,
+                    "latest_report": now.isoformat(),
+                }
+                feature = reports_to_hazards([report], at=now)["features"][0]
+                self.assertEqual(feature["properties"]["severity"], severity)
+                self.assertEqual(feature["properties"]["radius_m"], radius)
+                ring = feature["geometry"]["coordinates"][0]
+                self.assertEqual(ring[0], ring[-1])
+                north_radius = (max(point[1] for point in ring) - 25.8) * 111320
+                self.assertAlmostEqual(north_radius, radius, places=5)
 
 
 class LiveHazardsTests(unittest.TestCase):
