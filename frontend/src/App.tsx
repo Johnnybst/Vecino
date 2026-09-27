@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { APIProvider, Map, useMapsLibrary } from '@vis.gl/react-google-maps'
 import './App.css'
 import { DemoMap } from './DemoMap'
@@ -10,6 +11,7 @@ import type { RouteResult } from './routeTypes'
 import { I18nContext, messages, useI18n } from './i18n'
 import type { Language, TextKey } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
+import { IncidentsLayer } from './IncidentsLayer'
 import { TrafficLayer } from './TrafficLayer'
 import { SeverityLegend } from './SeverityLegend'
 import { TimeSlider } from './TimeSlider'
@@ -273,7 +275,16 @@ function AddressPanel({ onShowDemo, onRoute, hazards }: {
 function App() {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY
   const [showDemo, setShowDemo] = useState(false)
+  const dock = useRef<HTMLDivElement>(null)
+  const [dockHeight, setDockHeight] = useState(250)
+  useEffect(() => {
+    if (!dock.current) return
+    const observer = new ResizeObserver(([entry]) => setDockHeight(Math.ceil(entry.borderBoxSize[0].blockSize)))
+    observer.observe(dock.current)
+    return () => observer.disconnect()
+  }, [showDemo])
   const [traffic, setTraffic] = useState(false)
+  const [incidents, setIncidents] = useState(false)
   const [minutes, setMinutes] = useState(0)
   const [previewAt, setPreviewAt] = useState<string | undefined>()
   useEffect(() => {
@@ -298,7 +309,7 @@ function App() {
 
   return (
     <I18nContext.Provider value={{ language, setLanguage }}>
-    <main className={`map-screen${!showDemo ? ' main-map' : ''}${route ? ' has-route' : ''}`} aria-label={t.mapLabel}>
+    <main className={`map-screen${!showDemo ? ' main-map' : ''}${route ? ' has-route' : ''}`} style={{ '--dock-height': `${dockHeight}px` } as CSSProperties} aria-label={t.mapLabel}>
       <APIProvider apiKey={apiKey}>
         <Map
           style={{ width: '100%', height: '100%' }}
@@ -313,13 +324,15 @@ function App() {
           <AddressPanel onShowDemo={() => setShowDemo(true)} onRoute={(result) => { setMinutes(0); setPreviewAt(undefined); setRoute(result) }} hazards={hazards} />
         </div>
         {showDemo && <DemoMap onClose={() => setShowDemo(false)} />}
-        {!showDemo && <HazardsLayer key={previewAt ?? 'now'} at={previewAt}
-          onHazardsChange={previewAt ? ignorePreviewReports : setHazards} hideStatus={route !== null} />}
         <TrafficLayer enabled={traffic && !showDemo} />
-        {!showDemo && <div className="bottom-stack">
+        {!showDemo && <div className="bottom-stack" ref={dock}>
           <div className="map-tools">
             <label><input type="checkbox" checked={traffic} onChange={(event) => setTraffic(event.target.checked)} />{t.traffic}</label>
+            <label><input type="checkbox" checked={incidents} onChange={(event) => setIncidents(event.target.checked)} />{t.incidents}</label>
             <SeverityLegend />
+            <HazardsLayer key={previewAt ?? 'now'} at={previewAt}
+              onHazardsChange={previewAt ? ignorePreviewReports : setHazards} hideStatus={route !== null} />
+            {incidents && <IncidentsLayer />}
           </div>
           {demoMode && <TimeSlider minutes={minutes} onChange={setMinutes} />}
           {route && <RouteLayer result={route} onEdit={() => { setRoute(null); setMinutes(0); setPreviewAt(undefined) }} />}

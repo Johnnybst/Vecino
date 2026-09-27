@@ -4,6 +4,10 @@ export type Language = 'en' | 'es' | 'ht'
 export const languageNames: Record<Language, string> = { en: 'English', es: 'Español', ht: 'Kreyòl' }
 
 const en = {
+  incidents: 'Road incidents', incidentsLoading: 'Loading road incidents...', incidentsUnavailable: 'Road incidents are unavailable.',
+  incidentsNotice: 'Live incidents. Routes do not avoid these icons.', incidentsEmpty: 'No incidents returned. Roads may still have disruptions.',
+  incidentTypes: { crash: 'Crash', stalled_vehicle: 'Stopped vehicle', road_closed: 'Road closed', lane_closed: 'Lane closed' },
+  incidentAge: (n: number) => `Started ${n} min ago`,
   traffic: 'Traffic', reportLevels: 'Reported activity levels', severityLabels: { low: 'Low', medium: 'Medium', high: 'High' },
   outsideArea: 'Vecino covers Miami-Dade only.', previewOnly: 'Demo time changes reports only. Routes stay as requested.',
   loadingLiveReports: 'Loading reports...', liveRouteNotice: 'Routes based on reported activity',
@@ -63,6 +67,10 @@ type Messages = typeof en
 export type TextKey = { [K in keyof Messages]: Messages[K] extends string ? K : never }[keyof Messages]
 
 const es: Messages = {
+  incidents: 'Incidentes viales', incidentsLoading: 'Cargando incidentes viales...', incidentsUnavailable: 'Los incidentes viales no están disponibles.',
+  incidentsNotice: 'Incidentes en vivo. Las rutas no evitan estos iconos.', incidentsEmpty: 'No se recibieron incidentes. Aún puede haber interrupciones.',
+  incidentTypes: { crash: 'Choque', stalled_vehicle: 'Vehículo detenido', road_closed: 'Vía cerrada', lane_closed: 'Carril cerrado' },
+  incidentAge: (n) => `Comenzó hace ${n} min`,
   traffic: 'Tráfico', reportLevels: 'Niveles de actividad reportada', severityLabels: { low: 'Bajo', medium: 'Medio', high: 'Alto' },
   outsideArea: 'Vecino solo cubre Miami-Dade.', previewOnly: 'El tiempo de demostración solo cambia los reportes, no las rutas.',
   loadingLiveReports: 'Cargando reportes...', liveRouteNotice: 'Rutas basadas en actividad reportada',
@@ -119,6 +127,10 @@ const es: Messages = {
 }
 
 const ht: Messages = {
+  incidents: 'Ensidan sou wout', incidentsLoading: 'N ap chaje ensidan yo...', incidentsUnavailable: 'Ensidan sou wout yo pa disponib.',
+  incidentsNotice: 'Ensidan aktyèl. Wout yo pa evite ikon sa yo.', incidentsEmpty: 'Pa gen ensidan ki retounen. Ka toujou gen pwoblèm sou wout la.',
+  incidentTypes: { crash: 'Kolizyon', stalled_vehicle: 'Machin kanpe', road_closed: 'Wout fèmen', lane_closed: 'Vwa fèmen' },
+  incidentAge: (n) => `Te kòmanse ${n} minit de sa`,
   traffic: 'Trafik', reportLevels: 'Nivo aktivite rapòte', severityLabels: { low: 'Ba', medium: 'Mwayen', high: 'Wo' },
   outsideArea: 'Vecino kouvri Miami-Dade sèlman.', previewOnly: 'Tan demonstrasyon an chanje rapò yo sèlman, pa wout yo.',
   loadingLiveReports: 'N ap chaje rapò yo...', liveRouteNotice: 'Wout ki baze sou aktivite rapòte',

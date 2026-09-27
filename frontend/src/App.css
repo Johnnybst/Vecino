@@ -33,14 +33,19 @@
 .slider-heading .location-button { margin: 0 0 0 auto; font-size: 12px; padding: 6px; }
 .time-slider input { display: block; width: 100%; min-height: 32px; accent-color: #24583d; }
 .time-slider p { margin: 0; color: #526159; }
-.main-map .address-panel { max-height: calc(100dvh - 320px); }
+.main-map .address-panel { max-height: calc(100dvh - var(--dock-height, 250px) - 70px); }
 .main-map .hazards-status { bottom: calc(240px + env(safe-area-inset-bottom)); padding: 6px 12px; }
 .main-map .hazards-status.with-route { top: 135px; bottom: auto; }
-.map-tools { padding: 6px 12px; border-radius: 12px; background: white; box-shadow: 0 4px 20px #183b2926; }
+.map-tools { padding: 6px 12px; border-radius: 12px; background: white; box-shadow: 0 4px 20px #183b2926; display: flex; flex-wrap: wrap; column-gap: 12px; }
 .map-tools > label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-size: 13px; cursor: pointer; }
 .map-tools input { accent-color: #24583d; width: 18px; height: 18px; }
-.severity-legend { display: inline-flex; margin: 0 0 0 12px; gap: 8px; }
+.severity-legend { display: flex; width: 100%; margin: 0; gap: 12px; }
 .severity-icon { font-size: 18px; }
+.incidents-status { width: 100%; margin: 4px 0; color: #526159; font-size: 12px; }
+.map-tools .hazards-status { position: static; width: 100%; padding: 4px 0; box-shadow: none; border-radius: 0; font-size: 12px; }
+.bottom-stack { max-height: calc(100dvh - 165px); }
+.map-tools, .time-slider { flex-shrink: 0; }
+.bottom-stack .route-card { min-height: 0; }
 @keyframes card-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes popup-enter { from { opacity: 0; } to { opacity: 1; } }
 .route-card { animation: card-enter 220ms ease-out; }
