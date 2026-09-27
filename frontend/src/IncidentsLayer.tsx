@@ -69,11 +69,11 @@ export function IncidentsLayer() {
       position={{ lng: item.geometry.coordinates[0], lat: item.geometry.coordinates[1] }}
       title={`${t.incidents}: ${t.incidentTypes[item.properties.type]}`} zIndex={8}
       icon={roadIncidentIcon}
-      onClick={() => setSelectedId(item.properties.id)} />)}
+      onClick={() => setSelectedId(current => current === item.properties.id ? null : item.properties.id)} />)}
     {selected && <InfoWindow position={{ lng: selected.geometry.coordinates[0], lat: selected.geometry.coordinates[1] }}
       headerContent={<strong className="incident-popup-title"><img src={roadIncidentIcon} alt="" width="22" height="24" style={{ verticalAlign: 'middle', marginRight: 6 }} />{t.incidentTypes[selected.properties.type]}</strong>}
       maxWidth={260} onCloseClick={() => setSelectedId(null)}>
-      <div className="report-popup"><p>{incidentText(selected.properties.description, language)}</p>
+      <div className="report-popup" onClick={() => setSelectedId(null)}><p>{incidentText(selected.properties.description, language)}</p>
         <p>{t.incidentAge(Math.max(0, Math.floor((now - Date.parse(selected.properties.started_at)) / 60000)))}</p>
         <p>{t.incidentsNotice}</p></div>
     </InfoWindow>}
