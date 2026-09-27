@@ -241,6 +241,7 @@ async def _build_routes(origin, destination, profile, hazards, saved=None):
     return {
         "safe": {"geometry": detour["geometry"], **detour["properties"], "hazards_avoided": avoided},
         "normal": {"geometry": normal["geometry"], **normal["properties"], "hazards_crossed": crossed},
+        "has_detour": detour["geometry"] != normal["geometry"],
         "extra_minutes": extra, "explanation": explanation, "left_out": left_out,
         "endpoint_reports": endpoint_reports,
     }

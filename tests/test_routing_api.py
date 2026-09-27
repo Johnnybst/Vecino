@@ -52,7 +52,8 @@ class RouteApiTests(unittest.TestCase):
             response = self.client.post("/route", json=TRIP)
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(set(data), {"safe", "normal", "extra_minutes", "explanation", "left_out", "endpoint_reports"})
+        self.assertEqual(set(data), {"safe", "normal", "has_detour", "extra_minutes", "explanation", "left_out", "endpoint_reports"})
+        self.assertIs(data["has_detour"], True)
         self.assertEqual(data["endpoint_reports"], {"origin": [], "destination": []})
         self.assertEqual(data["safe"]["hazards_avoided"], ["hz_demo_1"])
         self.assertEqual(data["normal"]["hazards_crossed"], ["hz_demo_1"])
@@ -65,6 +66,7 @@ class RouteApiTests(unittest.TestCase):
         with patch("api.routing.get_route", new_callable=AsyncMock, return_value=self.routes[1]) as get:
             data = self.client.post("/route", json=TRIP).json()
         self.assertEqual(data["safe"]["geometry"], data["normal"]["geometry"])
+        self.assertIs(data["has_detour"], False)
         self.assertEqual(data["extra_minutes"], 0)
         self.assertEqual(data["safe"]["hazards_avoided"], [])
         self.assertEqual(get.await_count, 1)
@@ -75,6 +77,7 @@ class RouteApiTests(unittest.TestCase):
         with patch("api.routing.get_route", new_callable=AsyncMock, return_value=self.routes[0]) as get:
             data = self.client.post("/route", json=trip).json()
         self.assertEqual(data["left_out"], ["hz_demo_1"])
+        self.assertIs(data["has_detour"], False)
         self.assertEqual(data["endpoint_reports"], {"origin": ["hz_demo_1"], "destination": []})
         self.assertEqual(data["safe"]["hazards_avoided"], [])
         self.assertNotIn("looks clear", data["explanation"]["en"])
@@ -102,6 +105,18 @@ class RouteApiTests(unittest.TestCase):
         with patch("api.routing.get_route", new_callable=AsyncMock, return_value=self.routes[0]):
             response = self.client.post("/route", json=TRIP)
         self.assertEqual(response.status_code, 503)
+
+    def test_different_path_is_detour_even_with_no_extra_minutes(self):
+        detour = {**self.routes[1], "properties": {
+            **self.routes[1]["properties"],
+            "duration_s": self.routes[0]["properties"]["duration_s"],
+        }}
+        with patch("api.routing.get_route", new_callable=AsyncMock,
+                   side_effect=[self.routes[0], detour]):
+            response = self.client.post("/route", json=TRIP)
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response.json()["has_detour"], True)
+        self.assertEqual(response.json()["extra_minutes"], 0)
 
     def test_faded_circle_is_ignored(self):
         hazards = [{**load_demo_hazards()[0], "weight": 0.09}]
@@ -254,6 +269,7 @@ class DemoBackupTests(unittest.TestCase):
                    side_effect=httpx.ConnectError("offline")) as get:
             response = self.client.post("/route", json=self.trip)
         self.assertEqual(response.status_code, 200)
+        self.assertIs(response.json()["has_detour"], True)
         self.assertIn("Saved demo", response.json()["explanation"]["en"])
         self.assertEqual(response.json()["safe"]["hazards_avoided"], ["hz_1"])
         self.assertEqual(path.read_bytes(), before)
@@ -266,6 +282,7 @@ class DemoBackupTests(unittest.TestCase):
             response = self.client.post("/route", json=self.trip)
         data = response.json()
         self.assertEqual(response.status_code, 200)
+        self.assertIs(data["has_detour"], False)
         self.assertEqual(data["safe"]["hazards_avoided"], [])
         self.assertEqual(data["normal"]["hazards_crossed"], [])
         self.assertEqual(data["extra_minutes"], 0)
