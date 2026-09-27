@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { demoHazards, demoRoute } from './demoData'
 import { useI18n } from './i18n'
+import { useMapPopup } from './useMapPopup'
+import { TripMarkers } from './TripMarkers'
 import { LanguageSelect } from './LanguageSelect'
 
 const toPoint = ([lng, lat]: [number, number]) => ({ lat, lng })
@@ -11,7 +13,8 @@ export function DemoMap({ onClose }: { onClose: () => void }) {
   const map = useMap()
   const maps = useMapsLibrary('maps')
   const core = useMapsLibrary('core')
-  const [selectedReport, setSelectedReport] = useState<typeof demoHazards.features[number] | null>(null)
+  const { selectedId, toggle, close } = useMapPopup()
+  const selectedReport = demoHazards.features.find(report => report.properties.id === selectedId)
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
@@ -35,7 +38,7 @@ export function DemoMap({ onClose }: { onClose: () => void }) {
     }))
     const listeners = circles.map((circle, index) => circle.addListener('click', () => {
       const report = demoHazards.features[index]
-      setSelectedReport(current => current?.properties.id === report.properties.id ? null : report)
+      toggle(report.properties.id)
     }))
     // Google-style alternate: light gray with a darker outline, under the green route.
     const normalCasing = new maps.Polyline({
@@ -78,7 +81,7 @@ export function DemoMap({ onClose }: { onClose: () => void }) {
       if (previousCenter) map.setCenter(previousCenter)
       if (previousZoom !== undefined) map.setZoom(previousZoom)
     }
-  }, [map, maps, core])
+  }, [map, maps, core, toggle])
 
   const areasAvoided = new Set(demoRoute.safe.hazards_avoided).size
   const selectedProperties = selectedReport?.properties
@@ -90,14 +93,17 @@ export function DemoMap({ onClose }: { onClose: () => void }) {
 
   return (
     <>
+      <TripMarkers coordinates={demoRoute.safe.geometry.coordinates} />
       {selectedProperties && popupPosition && (
         <InfoWindow
           position={popupPosition}
-          onCloseClick={() => setSelectedReport(null)}
-          headerContent={t.sampleArea}
+          onClose={close}
+          headerDisabled
           maxWidth={260}
         >
-          <div className="report-popup" onClick={() => setSelectedReport(null)}>
+          <div className="report-popup">
+            <button type="button" className="report-popup-close" aria-label={t.closePopup} onClick={close}>×</button>
+            <strong>{t.sampleArea}</strong>
             <p>{t.sampleSummary}</p>
             <p>{t.areaReports(selectedProperties.report_count)}</p>
             <p>{t.reportAge(Math.max(0, Math.floor((now - Date.parse(selectedProperties.reported_at)) / 60000)))}</p>
@@ -112,7 +118,7 @@ export function DemoMap({ onClose }: { onClose: () => void }) {
           <button type="button" className="location-button" onClick={onClose}>{t.back}</button>
         </div>
       </div>
-      <section className="demo-card route-card" aria-label={t.sampleComparison}>
+      <section className="demo-card route-card sample-card" aria-label={t.sampleComparison}>
         <p className="demo-notice">{t.sampleNotice}</p>
         <h2>{t.routeHeadline(demoRoute.extra_minutes, areasAvoided)}</h2>
         <p>{demoRoute.explanation[language]}</p>

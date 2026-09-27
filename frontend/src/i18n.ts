@@ -20,15 +20,15 @@ export const languageNames: Record<Language, string> = { en: 'English', es: 'Esp
 const en = {
   closePopup: 'Close information',
   aboutLayer: (label: string) => `About ${label}`,
-  trafficHelp: 'Google traffic shows current congestion on roads. It does not change report severity.',
-  incidentsHelp: 'Show current crashes, stopped vehicles and closures. Updated every 5 minutes.',
-  reportsHelpLabel: 'Reports', reportColorsHelp: 'Color shows the level; grayness shows age. Critical and Moderate areas are avoided. Observed (green) sightings are not avoided; you get a notice instead. Critical stays on the map, grayed out; the others leave after 3 hours.',
+  trafficHelp: 'Turn this on to see where traffic is moving slowly. This layer helps you read road conditions; it does not change the reported activity shown on the map.',
+  incidentsHelp: 'Turn this on to see reported crashes, stopped vehicles and road closures. Tap an icon for details. We check for updates every five minutes. These markers provide context; Vecino does not use them to calculate detours.',
+  reportsHelpLabel: 'Reports', reportColorsHelp: 'These areas show where people have reported ICE activity. Tap an area to see when it was reported and how much supporting information is available. Vecino looks for a route around orange and red areas. Green areas are shown for awareness and may appear along your route. Reports turn gray as they get older. Red areas remain visible; other reports disappear after three hours. These are community reports, not confirmation of current activity.',
   historyLabel: 'Report history', historyTime: 'Look back',
   historyAgo: (n: number) => n === 0 ? 'Now' : `${reportDuration(n, 'en')} ago`,
   historyHint: 'Available reports at the selected time. Deleted reports cannot be recovered. Routes and road incidents stay current.',
   incidentLocation: { NOF: 'north of', SOF: 'south of', EOF: 'east of', WOF: 'west of', NB: 'northbound', SB: 'southbound', EB: 'eastbound', WB: 'westbound', ST: 'Street', AVE: 'Avenue', RD: 'Road', BLVD: 'Boulevard', TPKE: 'Turnpike', PKWY: 'Parkway', at: 'at', mileMarker: 'mile marker' },
   incidents: 'Road incidents', incidentsLoading: 'Loading road incidents...', incidentsUnavailable: 'Road incidents are unavailable.',
-  incidentsNotice: 'Live incidents. Routes do not avoid these icons.', incidentsEmpty: 'No incidents returned. Roads may still have disruptions.',
+  incidentsNotice: 'This road incident is shown for your information. Vecino does not calculate a detour around it.', incidentsEmpty: 'No incidents returned. Roads may still have disruptions.',
   incidentTypes: { crash: 'Crash', stalled_vehicle: 'Stopped vehicle', road_closed: 'Road closed', lane_closed: 'Lane closed' },
   incidentAge: (n: number) => `Started ${reportDuration(n, 'en')} ago`,
   traffic: 'Traffic', reportLevels: 'Reported activity levels', severityLabels: { low: 'Observed', medium: 'Moderate', high: 'Critical' },
@@ -59,7 +59,7 @@ const en = {
   routeIncomplete: 'The server returned an incomplete route. Please try again.',
   routeStopped: 'The route request stopped. You can try again.',
   serverUnavailable: 'Could not reach the route server. Check that it is running.',
-  showSample: 'Show sample circles and routes', back: 'Back', editTrip: 'Edit trip',
+  showSample: 'See how Vecino works', back: 'Back', editTrip: 'Edit trip',
   sampleMap: 'Sample map', yourRoutes: 'Your routes',
   sampleComparison: 'Sample route comparison', routeComparison: 'Your route comparison',
   sampleNotice: 'Demo only · Not directions for your selected trip',
@@ -83,8 +83,8 @@ const en = {
   leftOut: 'Nearby reported areas were left out of route avoidance. This route may pass through them. Review the report circles before continuing.',
   legend: 'Map legend', detour: 'Detour', usualRoute: 'Usual route', reportedArea: 'Reported area',
   sampleArea: 'Sample reported area', activityDemo: 'Reported activity · Demo',
-  syntheticNotice: 'Synthetic reports for the demo.', sampleDataNotice: 'Made-up data for this demo.',
-  sampleSummary: 'Synthetic reports near Little Havana',
+  syntheticNotice: 'This is an example report, not live activity.', sampleDataNotice: 'Made-up data for this demo.',
+  sampleSummary: 'Example reports near Little Havana',
   loadingReports: 'Loading demo reports...',
   reportsUnavailable: 'Reports unavailable. Check that the server is running; retrying automatically.',
   missingKey: 'Add VITE_GOOGLE_MAPS_KEY to frontend/.env, then restart the app.',
@@ -95,7 +95,7 @@ const en = {
   confidence: (n: number) => `Confidence: ${n >= 0.7 ? 'High' : n >= 0.4 ? 'Medium' : 'Low'}`,
   routeHeadline: (minutes: number, areas: number) => `+${minutes} min · avoids ${areas} reported ${areas === 1 ? 'area' : 'areas'}`,
   routeDetails: (minutes: number, km: number, hasDetour = true) => `${hasDetour ? 'Detour' : 'Usual route'}: ${minutes} min · ${km.toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
-  sampleExplanation: 'This sample detour adds 6 minutes and avoids 2 reported areas containing 2 reports.',
+  sampleExplanation: 'Vecino helps you compare your usual route with an alternative around reported ICE activity. In this example, the gray route passes through a made-up reported area in Little Havana. The green route follows nearby streets around it and takes about five minutes longer. Enter your own starting point and destination to compare routes using the reports currently available.',
 }
 
 type Messages = typeof en
@@ -106,7 +106,7 @@ const es: Messages = {
   aboutLayer: (label) => `Acerca de ${label}`,
   trafficHelp: 'El tráfico de Google muestra la congestión actual. No cambia el nivel de los reportes.',
   incidentsHelp: 'Muestra choques, vehículos detenidos y cierres actuales. Se actualiza cada 5 minutos.',
-  reportsHelpLabel: 'Reportes', reportColorsHelp: 'El color indica el nivel; el gris indica la antigüedad. Las zonas Críticas y Moderadas se evitan. Los avistamientos Observados (verdes) no se evitan; recibes un aviso. Lo Crítico queda en el mapa en gris; lo demás se va a las 3 horas.',
+  reportsHelpLabel: 'Reportes', reportColorsHelp: 'Estas zonas muestran dónde se ha reportado actividad de ICE. Toca una zona para ver cuándo se reportó y cuánto respaldo tiene. Vecino busca una ruta que rodee las zonas naranjas y rojas. Las verdes sirven como aviso y pueden quedar en tu ruta. Los reportes se vuelven grises con el tiempo. Las zonas rojas siguen visibles; los demás reportes desaparecen después de tres horas. Son reportes de la comunidad, no una confirmación de actividad actual.',
   historyLabel: 'Historial de reportes', historyTime: 'Ver el pasado',
   historyAgo: (n) => n === 0 ? 'Ahora' : `Hace ${reportDuration(n, 'es')}`,
   historyHint: 'Reportes disponibles en ese momento. Los eliminados no se pueden recuperar. Las rutas y los incidentes viales siguen siendo actuales.',
@@ -179,7 +179,7 @@ const es: Messages = {
   confidence: (n) => `Confianza: ${n >= 0.7 ? 'Alta' : n >= 0.4 ? 'Media' : 'Baja'}`,
   routeHeadline: (minutes, areas) => `+${minutes} min · evita ${areas} ${areas === 1 ? 'zona reportada' : 'zonas reportadas'}`,
   routeDetails: (minutes, km, hasDetour = true) => `${hasDetour ? 'Desvío' : 'Ruta habitual'}: ${minutes} min · ${km.toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
-  sampleExplanation: 'Este desvío de ejemplo añade 6 minutos y evita 2 zonas con 2 reportes de actividad.',
+  sampleExplanation: 'Vecino te ayuda a comparar tu ruta habitual con una alternativa que rodea zonas con actividad de ICE reportada. Aquí, la ruta gris cruza una zona de ejemplo en Little Havana. La verde sigue calles cercanas para rodearla y tarda unos cinco minutos más. Introduce tu punto de partida y destino para comparar rutas con los reportes disponibles.',
 }
 
 const ht: Messages = {
@@ -187,7 +187,7 @@ const ht: Messages = {
   aboutLayer: (label) => `Enfòmasyon sou ${label}`,
   trafficHelp: 'Trafik Google montre anbouteyaj aktyèl sou wout yo. Li pa chanje nivo rapò yo.',
   incidentsHelp: 'Montre kolizyon, machin kanpe ak wout fèmen kounye a. Li mete ajou chak 5 minit.',
-  reportsHelpLabel: 'Rapò', reportColorsHelp: 'Koulè montre nivo a; gri montre laj la. Wout la evite zòn Kritik ak Modere. Zòn Obsève (vèt) pa evite; ou resevwa yon avi. Kritik rete sou kat la an gri; lòt yo disparèt apre 3 èdtan.',
+  reportsHelpLabel: 'Rapò', reportColorsHelp: 'Zòn sa yo montre kote moun rapòte aktivite ICE. Peze yon zòn pou wè kilè yo te rapòte li ak kantite enfòmasyon ki soutni rapò a. Vecino chèche yon wout ki pase lwen zòn zoranj ak wouj yo. Zòn vèt yo la pou enfòme ou epi yo ka sou wout ou. Rapò yo vin gri pandan tan ap pase. Zòn wouj yo rete vizib; lòt rapò yo disparèt apre twa èdtan. Se rapò kominote a, se pa konfimasyon aktivite kounye a.',
   historyLabel: 'Istwa rapò yo', historyTime: 'Gade nan pase',
   historyAgo: (n) => n === 0 ? 'Kounye a' : `${reportDuration(n, 'ht')} de sa`,
   historyHint: 'Rapò ki disponib nan moman sa a. Nou pa ka rekipere rapò efase yo. Wout ak ensidan sou wout yo rete aktyèl.',
@@ -260,7 +260,7 @@ const ht: Messages = {
   confidence: (n) => `Konfyans: ${n >= 0.7 ? 'Wo' : n >= 0.4 ? 'Mwayen' : 'Ba'}`,
   routeHeadline: (minutes, areas) => `+${minutes} min · evite ${areas} zòn rapòte`,
   routeDetails: (minutes, km, hasDetour = true) => `${hasDetour ? 'Detou' : 'Wout nòmal'}: ${minutes} min · ${km.toLocaleString('fr-HT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('fr-HT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
-  sampleExplanation: 'Detou egzanp sa a ajoute 6 minit epi li evite 2 zòn ki gen 2 rapò aktivite.',
+  sampleExplanation: 'Vecino ede ou konpare wout nòmal ou ak yon lòt wout ki pase lwen kote yo rapòte aktivite ICE. Nan egzanp sa a, wout gri a travèse yon zòn rapò fiktif nan Little Havana. Wout vèt la suiv lari ki toupre yo pou evite zòn nan epi li pran anviwon senk minit anplis. Antre kote ou soti ak kote ou prale pou konpare wout ak rapò ki disponib yo.',
 }
 
 export const messages: Record<Language, Messages> = { en, es, ht }
