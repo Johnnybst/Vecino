@@ -1,3 +1,4 @@
+import { useMapPopup } from './useMapPopup'
 import { useEffect, useMemo, useState } from 'react'
 import { InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { reportSummary, useI18n } from './i18n'
@@ -54,7 +55,7 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
   const maps = useMapsLibrary('maps')
   const [hazards, setHazards] = useState<Hazard[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const { selectedId, toggle, close } = useMapPopup()
   const [updatedAt, setUpdatedAt] = useState(0)
 
   useEffect(() => {
@@ -121,7 +122,7 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
         zIndex: 1,
       })
       const listener = circle.addListener('click', () => {
-        setSelectedId(current => current === feature.properties.id ? null : feature.properties.id)
+        toggle(feature.properties.id)
       })
       return { circle, listener }
     })
@@ -129,7 +130,7 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
       listener.remove()
       circle.setMap(null)
     })
-  }, [map, maps, hazards, updatedAt])
+  }, [map, maps, hazards, updatedAt, toggle])
 
   const shapes = useMemo(() => hazards.map((feature) => ({
     id: feature.properties.id,
@@ -155,9 +156,11 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
         {status === 'error' && t.reportsUnavailable}
       </p>
       {selected && position && (
-        <InfoWindow position={position} headerContent={demoMode ? t.activityDemo : t.reportedArea} maxWidth={260}
-          onCloseClick={() => setSelectedId(null)}>
-          <div className="report-popup" onClick={() => setSelectedId(null)}>
+        <InfoWindow position={position} headerDisabled maxWidth={260}
+          onClose={close}>
+          <div className="report-popup">
+            <button type="button" className="report-popup-close" aria-label={t.closePopup} onClick={close}>×</button>
+            <strong>{demoMode ? t.activityDemo : t.reportedArea}</strong>
             <p><span aria-hidden="true" style={{ color: reportColor(selected.properties, updatedAt) }}>{severitySymbols[reportSeverity(selected.properties)]}</span> {t.severityLabels[reportSeverity(selected.properties)]}</p>
             <p>{reportSummary(selected.properties.summary, selected.properties.report_count, language)}</p>
             <p>{t.areaReports(selected.properties.report_count)}</p>

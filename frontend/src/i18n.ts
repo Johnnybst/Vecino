@@ -18,6 +18,7 @@ function reportDuration(totalMinutes: number, language: Language): string {
 export const languageNames: Record<Language, string> = { en: 'English', es: 'Español', ht: 'Kreyòl' }
 
 const en = {
+  closePopup: 'Close information',
   aboutLayer: (label: string) => `About ${label}`,
   trafficHelp: 'Google traffic shows current congestion on roads. It does not change report severity.',
   incidentsHelp: 'Show current crashes, stopped vehicles and closures. Updated every 5 minutes.',
@@ -97,6 +98,7 @@ type Messages = typeof en
 export type TextKey = { [K in keyof Messages]: Messages[K] extends string ? K : never }[keyof Messages]
 
 const es: Messages = {
+  closePopup: 'Cerrar información',
   aboutLayer: (label) => `Acerca de ${label}`,
   trafficHelp: 'El tráfico de Google muestra la congestión actual. No cambia el nivel de los reportes.',
   incidentsHelp: 'Muestra choques, vehículos detenidos y cierres actuales. Se actualiza cada 5 minutos.',
@@ -173,6 +175,7 @@ const es: Messages = {
 }
 
 const ht: Messages = {
+  closePopup: 'Fèmen enfòmasyon',
   aboutLayer: (label) => `Enfòmasyon sou ${label}`,
   trafficHelp: 'Trafik Google montre anbouteyaj aktyèl sou wout yo. Li pa chanje nivo rapò yo.',
   incidentsHelp: 'Montre kolizyon, machin kanpe ak wout fèmen kounye a. Li mete ajou chak 5 minit.',

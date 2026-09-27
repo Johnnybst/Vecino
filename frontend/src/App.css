@@ -548,3 +548,19 @@
 :root[data-theme='dark'] .follow-status.off-route { background: #3a2f14; border-color: #c9973a; color: #f4e2b8; }
 .follow-status.off-route p { margin: 0; }
 .follow-status.off-route .sample-button { margin-top: 8px; }
+
+.report-popup { position: relative; padding-top: 8px; }
+.report-popup > strong { display: block; padding-right: 44px; }
+.report-popup-close {
+  float: right;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: #fff;
+  color: #20392b;
+  font: 32px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+.report-popup-close:focus-visible { outline: 2px solid #24583d; }
