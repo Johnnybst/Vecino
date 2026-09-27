@@ -366,7 +366,10 @@
 }
 
 .legend-normal {
-  border-top: 4px dashed #606971;
+  height: 5px;
+  border: 2px solid #5f6368bf;
+  border-radius: 4px;
+  background: #dadce0;
 }
 
 .legend-report {

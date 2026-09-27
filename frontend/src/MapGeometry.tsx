@@ -6,7 +6,8 @@ export type MapShape = {
   rings: [number, number][][]
   color: string
   fillOpacity?: number
-  dashed?: boolean
+  // Google-style alternate route: wide, soft and see-through, drawn under the main one.
+  muted?: boolean
 }
 
 // SVG follows Google's projection on pan/zoom; only CSS performs animations.
@@ -21,20 +22,32 @@ export function MapGeometry({ shapes, polygons = false }: { shapes: MapShape[]; 
     svg.setAttribute('aria-hidden', 'true')
     svg.style.zIndex = polygons ? '1' : '2'
     const paths = shapes.map((shape) => {
+      // Muted lines get a darker outline so they stay visible on Google's gray main roads.
+      const casing = shape.muted ? document.createElementNS('http://www.w3.org/2000/svg', 'path') : null
+      if (casing) {
+        casing.setAttribute('stroke', '#5f6368')
+        casing.setAttribute('stroke-opacity', '0.75')
+        casing.setAttribute('stroke-width', '9')
+        casing.setAttribute('fill', 'none')
+        casing.setAttribute('stroke-linejoin', 'round')
+        casing.setAttribute('stroke-linecap', 'round')
+        casing.setAttribute('class', 'usual-shape')
+        svg.appendChild(casing)
+      }
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
       path.dataset.shapeId = shape.id
       path.setAttribute('stroke', shape.color)
-      path.setAttribute('stroke-width', polygons ? '2' : shape.dashed ? '4' : '6')
+      path.setAttribute('stroke-width', polygons ? '2' : shape.muted ? '5' : '6')
+      if (shape.muted) path.setAttribute('stroke-opacity', '0.9')
       path.setAttribute('fill', polygons ? shape.color : 'none')
       path.setAttribute('fill-opacity', String(shape.fillOpacity ?? 0))
       path.setAttribute('fill-rule', 'evenodd')
       path.setAttribute('stroke-linejoin', 'round')
       path.setAttribute('stroke-linecap', 'round')
-      path.setAttribute('class', polygons ? 'report-shape' : shape.dashed ? 'usual-shape' : 'route-shape')
-      if (shape.dashed) path.setAttribute('stroke-dasharray', '9 9')
-      else if (!polygons) path.setAttribute('pathLength', '1')
+      path.setAttribute('class', polygons ? 'report-shape' : shape.muted ? 'usual-shape' : 'route-shape')
+      if (!polygons && !shape.muted) path.setAttribute('pathLength', '1')
       svg.appendChild(path)
-      return path
+      return { path, casing }
     })
     const overlay = new maps.OverlayView()
     overlay.onAdd = () => { overlay.getPanes()?.overlayLayer.appendChild(svg) }
@@ -45,7 +58,8 @@ export function MapGeometry({ shapes, polygons = false }: { shapes: MapShape[]; 
           const point = projection.fromLatLngToDivPixel(new core.LatLng(lat, lng))
           return point ? `${pointIndex === 0 ? 'M' : 'L'}${point.x},${point.y}` : ''
         }).join(' ') + (polygons ? ' Z' : '')).join(' ')
-        paths[index].setAttribute('d', d)
+        paths[index].path.setAttribute('d', d)
+        paths[index].casing?.setAttribute('d', d)
       })
     }
     overlay.onRemove = () => svg.remove()
