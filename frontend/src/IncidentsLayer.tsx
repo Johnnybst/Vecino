@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { InfoWindow, Marker } from '@vis.gl/react-google-maps'
 import { useI18n } from './i18n'
 import { incidentText } from './incidentText'
+import roadIncidentIcon from './assets/road-incident.svg'
 
-const incidentSymbols = { crash: '◆', stalled_vehicle: '■', road_closed: '⊗', lane_closed: '▥' }
-type IncidentType = keyof typeof incidentSymbols
+const incidentTypes = ['crash', 'stalled_vehicle', 'road_closed', 'lane_closed'] as const
+type IncidentType = typeof incidentTypes[number]
 type Incident = {
   type: 'Feature'
   geometry: { type: 'Point'; coordinates: [number, number] }
@@ -19,7 +20,7 @@ function isIncident(value: unknown): value is Incident {
     && point.length >= 2 && Number.isFinite(point[0]) && Number.isFinite(point[1])
     && point[0] >= -80.88 && point[0] <= -80.11 && point[1] >= 25.13 && point[1] <= 25.98
     && !!item.properties && typeof item.properties.id === 'string'
-    && Object.hasOwn(incidentSymbols, item.properties.type)
+    && incidentTypes.includes(item.properties.type)
     && typeof item.properties.description === 'string'
     && Number.isFinite(Date.parse(item.properties.started_at))
 }
@@ -66,12 +67,11 @@ export function IncidentsLayer() {
       : status === 'error' ? t.incidentsUnavailable : incidents.length ? t.incidentsNotice : t.incidentsEmpty}</p>
     {incidents.map((item) => <Marker key={item.properties.id}
       position={{ lng: item.geometry.coordinates[0], lat: item.geometry.coordinates[1] }}
-      title={t.incidentTypes[item.properties.type]} zIndex={8}
-      label={{ text: incidentSymbols[item.properties.type], color: '#ffffff', fontSize: '16px' }}
-      icon={{ path: 'M -11,-11 L 11,-11 L 11,11 L -11,11 Z', fillColor: '#36576c', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }}
+      title={`${t.incidents}: ${t.incidentTypes[item.properties.type]}`} zIndex={8}
+      icon={roadIncidentIcon}
       onClick={() => setSelectedId(item.properties.id)} />)}
     {selected && <InfoWindow position={{ lng: selected.geometry.coordinates[0], lat: selected.geometry.coordinates[1] }}
-      headerContent={<strong className="incident-popup-title"><span aria-hidden="true">{incidentSymbols[selected.properties.type]}</span> {t.incidentTypes[selected.properties.type]}</strong>}
+      headerContent={<strong className="incident-popup-title"><img src={roadIncidentIcon} alt="" width="22" height="24" style={{ verticalAlign: 'middle', marginRight: 6 }} />{t.incidentTypes[selected.properties.type]}</strong>}
       maxWidth={260} onCloseClick={() => setSelectedId(null)}>
       <div className="report-popup"><p>{incidentText(selected.properties.description, language)}</p>
         <p>{t.incidentAge(Math.max(0, Math.floor((now - Date.parse(selected.properties.started_at)) / 60000)))}</p>
