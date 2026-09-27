@@ -655,11 +655,16 @@
       "hz_1"
     ]
   },
+  "has_detour": true,
   "extra_minutes": 4,
   "explanation": {
-    "en": "This route adds 4 minutes and avoids 1 reported activity areas.",
-    "es": "Esta ruta a\u00f1ade 4 minutos y evita 1 zonas con actividad reportada.",
-    "ht": "Wout sa a ajoute 4 minit epi li evite 1 z\u00f2n kote yo rap\u00f2te aktivite."
+    "en": "This route takes 4 extra minutes and avoids 1 area with reported activity near Little Havana.",
+    "es": "Esta ruta toma 4 minutos adicionales y evita 1 zona con actividad reportada cerca de Little Havana.",
+    "ht": "Wout sa a pran 4 minit anplis epi li evite 1 z\u00f2n ki gen aktivite rap\u00f2te toupre Little Havana."
   },
-  "left_out": []
+  "left_out": [],
+  "endpoint_reports": {
+    "origin": [],
+    "destination": []
+  }
 }
