@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Marker, useMap } from '@vis.gl/react-google-maps'
 import { useI18n } from './i18n'
 import type { TextKey } from './i18n'
+import { RouteLoading } from './RouteLoading'
 
 type Spot = { lat: number; lng: number }
 
@@ -112,7 +113,8 @@ export function FollowMe({ line, onRecalculate }: {
       {following && offRoute && line && <div className="follow-status off-route" role="alert">
         <p>{onRecalculate ? t.offRoute : t.offRouteEdit}</p>
         {onRecalculate && <button type="button" className="sample-button" onClick={newRouteHere}
-          disabled={recalculating}>{recalculating ? t.findingRoutes : t.newRouteHere}</button>}
+          aria-busy={recalculating} disabled={recalculating}>{recalculating ? t.findingRoutes : t.newRouteHere}</button>}
+        {recalculating && <RouteLoading />}
       </div>}
     </div>
   </>

@@ -8,6 +8,23 @@
 .map-canvas { width: 100%; height: 100%; position: relative; }
 .vecino-panel { z-index: 2; }
 .vecino-panel[hidden] { display: none; }
+.route-loading {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin-top: 12px; padding: 12px; border-radius: 10px;
+  background: #edf5ef; color: #24583d; text-align: left;
+  font-size: 14px; line-height: 1.45;
+}
+.route-loading p { margin: 4px 0 0; font-size: 13px; }
+.route-loading-spinner {
+  flex: 0 0 18px; width: 18px; height: 18px; margin-top: 2px;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  animation: route-loading-spin 280ms linear infinite;
+}
+@keyframes route-loading-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-spinner { animation: none; }
+}
+:root[data-theme='dark'] .route-loading { background: #23372b; color: #c1ecd1; }
 .trip-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
 .panel-map-controls { border-top: 1px solid #dbe5de; margin-top: 12px; padding-top: 8px; }
 .layer-options { position: relative; display: flex; flex-wrap: wrap; column-gap: 12px; }

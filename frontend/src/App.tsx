@@ -15,6 +15,7 @@ import type { ThemeChoice } from './theme'
 import { TrafficLayer } from './TrafficLayer'
 import { MapControls } from './MapControls'
 import { FollowMe } from './FollowMe'
+import { RouteLoading } from './RouteLoading'
 
 
 const ignorePreviewReports = () => {}
@@ -261,13 +262,17 @@ function AddressPanel({ onShowDemo, onRoute, hazards }: {
       </p>
       </div>
       <button type="button" className="sample-button" onClick={findRoutes}
+        aria-busy={loadingRoute}
         disabled={!origin || !destination || loadingRoute}>
         {loadingRoute ? t.findingRoutes : t.findRoutes}
       </button>
       {loadingRoute && (
+        <>
+        <RouteLoading />
         <button type="button" className="location-button" onClick={() => routeRequest.current?.abort()}>
           {t.cancel}
         </button>
+        </>
       )}
       {routeError && <p className="address-status" role="alert">{t[routeError]}</p>}
       <button type="button" className="location-button sample-link" onClick={onShowDemo} disabled={loadingRoute}>
