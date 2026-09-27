@@ -13,6 +13,14 @@ SEED_FILE = ROOT / "data" / "seed_reports.json"
 DEMO_STARTED_AT = datetime.now(timezone.utc)
 
 
+def severity_and_radius(report_count, confidence):
+    if report_count >= 4 or confidence >= 0.85:
+        return "high", 250
+    if report_count >= 2:
+        return "medium", 200
+    return "low", 150
+
+
 def parse_time(value):
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     # Older collector timestamps without an offset are also stored in UTC.
@@ -106,12 +114,14 @@ def reports_to_hazards(reports, at=None):
             continue
 
         count = report["source_count"]
+        severity, radius_m = severity_and_radius(count, confidence)
 
         features.append({
             "type": "Feature",
             "geometry": make_circle(
                 report["latitude"],
                 report["longitude"],
+                radius_m=radius_m,
             ),
             "properties": {
                 "id": f"hz_{report['id']}",
@@ -120,6 +130,8 @@ def reports_to_hazards(reports, at=None):
                 "confidence": confidence,
                 "report_count": count,
                 "weight": weight,
+                "severity": severity,
+                "radius_m": radius_m,
             },
         })
 
