@@ -11,11 +11,13 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
   const maps = useMapsLibrary('maps')
   const core = useMapsLibrary('core')
   const route = result.data
+  // Older deployments may not yet send the explicit detour flag.
+  const hasDetour = route.has_detour ?? (JSON.stringify(route.safe.geometry.coordinates) !== JSON.stringify(route.normal.geometry.coordinates))
 
   useEffect(() => {
     if (!map || !maps || !core) return
     const toPoint = ([lng, lat]: [number, number]) => ({ lat, lng })
-    const normal = new maps.Polyline({
+    const normal = hasDetour ? new maps.Polyline({
       map,
       path: route.normal.geometry.coordinates.map(toPoint),
       strokeOpacity: 0,
@@ -25,7 +27,7 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
       }],
       clickable: false,
       zIndex: 3,
-    })
+    }) : null
     const safe = new maps.Polyline({
       map,
       path: route.safe.geometry.coordinates.map(toPoint),
@@ -39,10 +41,10 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
     }
     map.fitBounds(bounds, { top: 135, right: 40, bottom: 280, left: 40 })
     return () => {
-      normal.setMap(null)
+      normal?.setMap(null)
       safe.setMap(null)
     }
-  }, [map, maps, core, route])
+  }, [map, maps, core, route, hasDetour])
 
   const avoided = new Set(route.safe.hazards_avoided)
   const nearStart = !!route.endpoint_reports?.origin.length
@@ -50,7 +52,6 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
   const warningTitle = nearStart && nearDestination ? t.activityBoth
     : nearStart ? t.activityStart
     : nearDestination ? t.activityDestination : t.nearbyActivity
-  const overlapping = JSON.stringify(route.safe.geometry.coordinates) === JSON.stringify(route.normal.geometry.coordinates)
 
   return (
     <>
@@ -68,15 +69,14 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
           </div>
         )}
         <p className="demo-notice">{demoMode ? t.routeNotice : t.liveRouteNotice}</p>
-        <h2>{t.routeHeadline(route.extra_minutes, avoided.size)}</h2>
+        <h2>{hasDetour ? t.routeHeadline(route.extra_minutes, avoided.size) : t.usualRoute}</h2>
         <p>{route.explanation[language]}</p>
         <p className="route-details">
-          {t.routeDetails(Math.ceil(route.safe.duration_s / 60), route.safe.distance_m / 1000)}
+          {t.routeDetails(Math.ceil(route.safe.duration_s / 60), route.safe.distance_m / 1000, hasDetour)}
         </p>
-        {overlapping && <p className="route-details">{t.samePath}</p>}
         <ul className="map-legend" aria-label={t.legend}>
-          <li><span className="legend-detour" />{t.detour}</li>
-          <li><span className="legend-normal" />{t.usualRoute}</li>
+          <li><span className="legend-detour" />{hasDetour ? t.detour : t.usualRoute}</li>
+          {hasDetour && <li><span className="legend-normal" />{t.usualRoute}</li>}
           <li><span className="legend-report" />{t.reportedArea}</li>
         </ul>
       </section>

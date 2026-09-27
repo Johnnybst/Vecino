@@ -53,7 +53,7 @@ const en = {
   reportAge: (n: number) => `Reported ${n} min ago`,
   confidence: (n: number) => `Confidence: ${n >= 0.7 ? 'High' : n >= 0.4 ? 'Medium' : 'Low'}`,
   routeHeadline: (minutes: number, areas: number) => `+${minutes} min · avoids ${areas} reported ${areas === 1 ? 'area' : 'areas'}`,
-  routeDetails: (minutes: number, km: number) => `Detour: ${minutes} min · ${km.toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
+  routeDetails: (minutes: number, km: number, hasDetour = true) => `${hasDetour ? 'Detour' : 'Usual route'}: ${minutes} min · ${km.toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
   sampleExplanation: 'This sample detour adds 6 minutes and avoids 2 reported areas containing 2 reports.',
 }
 
@@ -110,7 +110,7 @@ const es: Messages = {
   reportAge: (n) => `Reportado hace ${n} min`,
   confidence: (n) => `Confianza: ${n >= 0.7 ? 'Alta' : n >= 0.4 ? 'Media' : 'Baja'}`,
   routeHeadline: (minutes, areas) => `+${minutes} min · evita ${areas} ${areas === 1 ? 'zona reportada' : 'zonas reportadas'}`,
-  routeDetails: (minutes, km) => `Desvío: ${minutes} min · ${km.toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
+  routeDetails: (minutes, km, hasDetour = true) => `${hasDetour ? 'Desvío' : 'Ruta habitual'}: ${minutes} min · ${km.toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
   sampleExplanation: 'Este desvío de ejemplo añade 6 minutos y evita 2 zonas con 2 reportes de actividad.',
 }
 
@@ -164,7 +164,7 @@ const ht: Messages = {
   reportAge: (n) => `Yo rapòte sa ${n} minit de sa`,
   confidence: (n) => `Konfyans: ${n >= 0.7 ? 'Wo' : n >= 0.4 ? 'Mwayen' : 'Ba'}`,
   routeHeadline: (minutes, areas) => `+${minutes} min · evite ${areas} zòn rapòte`,
-  routeDetails: (minutes, km) => `Detou: ${minutes} min · ${km.toLocaleString('fr-HT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('fr-HT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
+  routeDetails: (minutes, km, hasDetour = true) => `${hasDetour ? 'Detou' : 'Wout nòmal'}: ${minutes} min · ${km.toLocaleString('fr-HT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('fr-HT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
   sampleExplanation: 'Detou egzanp sa a ajoute 6 minit epi li evite 2 zòn ki gen 2 rapò aktivite.',
 }
 

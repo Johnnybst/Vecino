@@ -7,6 +7,7 @@ type RouteLine = {
 }
 
 export type RouteResponse = {
+  has_detour?: boolean
   safe: RouteLine & { hazards_avoided: string[] }
   normal: RouteLine & { hazards_crossed: string[] }
   extra_minutes: number
@@ -36,6 +37,7 @@ export function isRouteResponse(value: unknown): value is RouteResponse {
   if (!value || typeof value !== 'object') return false
   const route = value as RouteResponse
   return isLine(route.safe) && isLine(route.normal)
+    && (route.has_detour === undefined || typeof route.has_detour === 'boolean')
     && isIds(route.safe.hazards_avoided) && isIds(route.normal.hazards_crossed)
     && Number.isFinite(route.extra_minutes) && route.extra_minutes >= 0
     && typeof route.explanation?.en === 'string'
