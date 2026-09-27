@@ -53,7 +53,7 @@ class LiveHazardsTests(unittest.TestCase):
                 notified INTEGER)""")
             rows = [
                 (1, 10, 0.8, 25.8, -80.2),
-                (2, 361, 0.9, 25.8, -80.2),
+                (2, 1500, 0.9, 25.8, -80.2),  # 25 h old: past every level's lifetime
                 (3, -10, 0.9, 25.8, -80.2),
                 (4, 10, 0.9, None, -80.2),
                 (5, 10, 0.9, 25.8, None),
@@ -71,7 +71,7 @@ class LiveHazardsTests(unittest.TestCase):
         before = self.path.read_bytes()
         self.assertEqual([r["id"] for r in load_live_reports(self.now)], [1, 6])
         features = get_hazards(self.now)["features"]
-        self.assertEqual([f["properties"]["id"] for f in features], ["hz_1"])
+        self.assertEqual([f["properties"]["id"] for f in features], ["hz_1", "hz_6"])
         self.assertTrue(features[0]["properties"]["reported_at"].endswith("Z"))
         self.assertEqual(self.path.read_bytes(), before)
 
@@ -105,10 +105,11 @@ class LiveHazardsTests(unittest.TestCase):
                 self.assertEqual(any(f["properties"]["id"] == "hz_1" for f in features), included)
                 self.assertEqual(self.path.read_bytes(), before)
 
-    def test_time_preview_keeps_only_critical_after_three_hours(self):
-        later = get_hazards(self.now + timedelta(hours=4))["features"]
-        self.assertTrue(later)
-        self.assertEqual({f["properties"]["severity"] for f in later}, {"high"})
+    def test_time_preview_drops_observed_at_three_hours_and_moderate_at_six(self):
+        at_four = {f["properties"]["severity"] for f in get_hazards(self.now + timedelta(hours=4))["features"]}
+        self.assertNotIn("low", at_four)
+        at_seven = {f["properties"]["severity"] for f in get_hazards(self.now + timedelta(hours=7))["features"]}
+        self.assertLessEqual(at_seven, {"high"})
 
     def test_missing_database_is_not_created_or_replaced_with_demo(self):
         missing = Path(self.temp.name) / "missing.db"
@@ -129,7 +130,7 @@ class LiveHazardsTests(unittest.TestCase):
     def test_live_api_and_routing_share_reports(self):
         client = TestClient(app)
         features = client.get("/hazards").json()["features"]
-        self.assertEqual([f["properties"]["id"] for f in features], ["hz_1"])
+        self.assertEqual([f["properties"]["id"] for f in features], ["hz_1", "hz_6"])
         with patch("api.main.build_routes", new_callable=AsyncMock, return_value={}) as build:
             response = client.post("/route", json={
                 "origin": {"lat": 25.7, "lng": -80.3},
@@ -137,4 +138,4 @@ class LiveHazardsTests(unittest.TestCase):
                 "destination": {"lat": 25.9, "lng": -80.15},
             })
         self.assertEqual(response.status_code, 200)
-        self.assertEqual([h["id"] for h in build.call_args.args[3]], ["hz_1"])
+        self.assertEqual([h["id"] for h in build.call_args.args[3]], ["hz_1", "hz_6"])

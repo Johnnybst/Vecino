@@ -2,11 +2,11 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from api.hazards import reports_to_hazards
+from api.hazards import last_wipe, reports_to_hazards
 from api.routing import _build_routes
 from tests.test_routing_radius import CENTER, point, route
 
-NOW = datetime(2026, 9, 27, 12, tzinfo=timezone.utc)
+NOW = datetime(2026, 9, 27, 20, tzinfo=timezone.utc)  # 4 PM in Miami; today's wipe was at 4 AM
 
 
 def seed(count, confidence, age_minutes):
@@ -31,16 +31,23 @@ class LevelTests(unittest.TestCase):
                 self.assertEqual((props["severity"], props["radius_m"], props["reroute"]),
                                  (severity, radius, reroute))
 
-    def test_critical_grays_but_stays_while_others_leave_at_three_hours(self):
-        self.assertEqual(len(shown(4, 0.7, 300)), 1)   # Critical, 5 h old: still shown
-        self.assertLess(shown(4, 0.7, 300)[0]["properties"]["weight"], 0.1)
-        for count in (2, 1):                            # Moderate, Observed
-            with self.subTest(count=count):
-                self.assertEqual(len(shown(count, 0.7, 170)), 1)
-                self.assertEqual(shown(count, 0.7, 180), [])
+    def test_how_long_each_level_stays(self):
+        # Observed: 3 hours. Moderate: 6 hours.
+        self.assertEqual(len(shown(1, 0.7, 170)), 1)
+        self.assertEqual(shown(1, 0.7, 180), [])
+        self.assertEqual(len(shown(2, 0.7, 350)), 1)
+        self.assertEqual(shown(2, 0.7, 360), [])
+        # Critical: grays out but stays until the 4 AM wipe (reported 6 AM -> still shown at 4 PM).
+        critical = shown(4, 0.7, 600)
+        self.assertEqual(len(critical), 1)
+        self.assertLess(critical[0]["properties"]["weight"], 0.1)
+        # Reported 3 AM, before this morning's wipe -> gone.
+        self.assertEqual(shown(4, 0.7, 780), [])
 
-    def test_nothing_older_than_six_hours(self):
-        self.assertEqual(shown(4, 0.9, 361), [])
+    def test_last_wipe_is_the_most_recent_4_am_in_miami(self):
+        self.assertEqual(last_wipe(NOW), datetime(2026, 9, 27, 8, tzinfo=timezone.utc))
+        three_am = datetime(2026, 9, 27, 7, tzinfo=timezone.utc)
+        self.assertEqual(last_wipe(three_am), datetime(2026, 9, 26, 8, tzinfo=timezone.utc))
 
 
 def area(ident, reroute, severity, weight=0.8):

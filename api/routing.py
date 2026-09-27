@@ -247,8 +247,9 @@ async def _build_routes(origin, destination, profile, hazards, saved=None, langu
     """Build the team's response with a 300 m extra gap and no trip storage."""
     active, sightings = [], []
     for h in hazards:
-        # Critical reports stay (grayed out) even when their weight is low.
-        if h["weight"] < 0.1 and h.get("severity") != "high":
+        # The server already decides which reports are still shown (by level); only older
+        # callers without a level fall back to the fade weight.
+        if h["weight"] < 0.1 and "severity" not in h:
             continue
         # Older saved/demo reports omit this field and retain their 150 m size.
         radius = float(h.get("radius_m", REPORT_RADIUS_M))

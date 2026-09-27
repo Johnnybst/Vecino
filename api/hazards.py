@@ -18,8 +18,27 @@ DEMO_STARTED_AT = datetime.now(timezone.utc)
 SEVERITY_RADIUS_M = {"high": 250, "medium": 100, "low": 100}
 # Observed sightings only warn the traveler; they never cause a detour.
 REROUTE = {"high": True, "medium": True, "low": False}
-# Moderate and Observed leave the map after 3 hours. Critical only grays out.
-SHORT_LIVED_MINUTES = 180
+# How long each level stays on the map: Observed 3 h, Moderate 6 h, Critical until the morning wipe.
+LIFETIME_MINUTES = {"low": 180, "medium": 360}
+# IceOut starts from a clean slate around 4 AM Miami time; Critical reports stay until then.
+WIPE_HOUR = 4
+# Miami is on EDT (UTC-4) until Nov 1; Windows lacks the time zone database.
+MIAMI_TIME = timezone(timedelta(hours=-4))
+# Oldest report worth reading from the database (a Critical can be almost a day old at the wipe).
+MAX_AGE_HOURS = 24
+
+
+def last_wipe(now):
+    """The most recent 4 AM in Miami at or before `now`."""
+    local = now.astimezone(MIAMI_TIME)
+    wipe = local.replace(hour=WIPE_HOUR, minute=0, second=0, microsecond=0)
+    return wipe if wipe <= local else wipe - timedelta(days=1)
+
+
+def still_shown(severity, reported_at, now):
+    if severity == "high":
+        return reported_at >= last_wipe(now)
+    return (now - reported_at).total_seconds() / 60 < LIFETIME_MINUTES[severity]
 
 
 # IceOut's own level for a report (category_enum): 0 Critical, 1 Active, 2 Observed (3 Other = no level).
@@ -48,7 +67,7 @@ def parse_time(value):
 def load_live_reports(at=None):
     """Read recent clusters without creating or changing the collector database."""
     current_time = at if at is not None else datetime.now(timezone.utc)
-    cutoff = current_time - timedelta(hours=6)
+    cutoff = current_time - timedelta(hours=MAX_AGE_HOURS)
     db_path = Path(os.getenv("DB_PATH", "ice_monitor.db")).expanduser()
     if not db_path.is_absolute():
         db_path = ROOT / db_path
@@ -132,7 +151,7 @@ def reports_to_hazards(reports, at=None):
             continue
 
         age_minutes = (current_time - reported_at).total_seconds() / 60
-        if age_minutes > 360:
+        if age_minutes > MAX_AGE_HOURS * 60:
             continue
 
         confidence = report["confidence_score"]
@@ -141,8 +160,8 @@ def reports_to_hazards(reports, at=None):
         count = report["source_count"]
         severity, radius_m = severity_and_radius(count, confidence, report.get("iceout_category"))
 
-        # Critical stays (grayed) for the whole 6-hour window; the rest go after 3 hours.
-        if severity != "high" and age_minutes >= SHORT_LIVED_MINUTES:
+        # Observed 3 h, Moderate 6 h, Critical until the 4 AM wipe (colors still gray with age).
+        if not still_shown(severity, reported_at, current_time):
             continue
 
         features.append({

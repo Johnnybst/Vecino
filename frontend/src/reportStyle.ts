@@ -13,7 +13,8 @@ export function reportSeverity(properties: Hazard['properties']): Severity {
 export function reportColor(properties: Hazard['properties'], at: number) {
   const base = severityColors[reportSeverity(properties)]
   const ageMinutes = Math.max(0, (at - Date.parse(properties.reported_at)) / 60000)
-  const blend = Math.min(ageMinutes / 180, 1) * 0.75
+  // Grays over the level's own lifetime (Observed 3 h, Moderate and Critical 6 h), then stays grayed.
+  const blend = Math.min(ageMinutes / (reportSeverity(properties) === 'low' ? 180 : 360), 1) * 0.75
   const channels = [1, 3, 5].map((start) => {
     const channel = parseInt(base.slice(start, start + 2), 16)
     return Math.round(channel + (158 - channel) * blend).toString(16).padStart(2, '0')

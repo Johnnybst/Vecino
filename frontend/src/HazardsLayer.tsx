@@ -80,9 +80,10 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
           throw new Error('Invalid reports')
         }
         if (disposed) return
-        // Critical reports gray out but stay; the server already drops the rest after 3 hours.
-        const visible = data.features.filter((feature) => feature.properties.weight >= 0.1
-          || reportSeverity(feature.properties) === 'high')
+        // The server decides how long each level stays (Observed 3 h, Moderate 6 h, Critical until
+        // the morning wipe); only reports without a level fall back to the fade weight.
+        const visible = data.features.filter((feature) => feature.properties.severity !== undefined
+          || feature.properties.weight >= 0.1)
         setHazards(visible)
         onHazardsChange(visible)
         setUpdatedAt(at ? Date.parse(at) : Date.now())
