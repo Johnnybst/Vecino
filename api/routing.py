@@ -129,6 +129,20 @@ def template_explanation(extra_minutes, area_count, report_count, left_out):
     }
 
 
+def sighting_explanation(count):
+    if count == 1:
+        return {
+            "en": "No detour needed. Your route passes an area with an observed sighting; stay aware.",
+            "es": "No hace falta desvío. Tu ruta pasa por una zona con un avistamiento observado; mantente atento.",
+            "ht": "Pa bezwen detou. Wout ou pase bò yon zòn kote yo te wè aktivite; rete vijilan.",
+        }
+    return {
+        "en": f"No detour needed. Your route passes {count} areas with observed sightings; stay aware.",
+        "es": f"No hace falta desvío. Tu ruta pasa por {count} zonas con avistamientos observados; mantente atento.",
+        "ht": f"Pa bezwen detou. Wout ou pase bò {count} zòn kote yo te wè aktivite; rete vijilan.",
+    }
+
+
 async def build_routes(origin, destination, profile, hazards):
     """Use a saved fixed demo only on a service outage, never for other trips."""
     try:
@@ -154,15 +168,17 @@ async def build_routes(origin, destination, profile, hazards):
 
 async def _build_routes(origin, destination, profile, hazards, saved=None):
     """Build the team's response with a 300 m extra gap and no trip storage."""
-    active = []
+    active, sightings = [], []
     for h in hazards:
-        if h["weight"] < 0.1:
+        # Critical reports stay (grayed out) even when their weight is low.
+        if h["weight"] < 0.1 and h.get("severity") != "high":
             continue
         # Older saved/demo reports omit this field and retain their 150 m size.
         radius = float(h.get("radius_m", REPORT_RADIUS_M))
         if not math.isfinite(radius) or radius <= 0:
             raise ValueError("Report radius must be a positive finite distance.")
-        active.append({**h, "radius_m": radius})
+        # Observed sightings (reroute=False) only get a notice, never a detour.
+        (active if h.get("reroute", True) else sightings).append({**h, "radius_m": radius})
     left_out, usable = [], []
     endpoint_reports = {"origin": [], "destination": []}
     for hazard in active:
@@ -239,12 +255,19 @@ async def _build_routes(origin, destination, profile, hazards, saved=None):
             explanation = {lang: result[lang] for lang in ("en", "es", "ht")}
         except Exception:
             explanation = backup_sentence(extra, len(avoided))
+
+    # Sightings on the route the person will actually take (the safe one).
+    sightings_on_route = [h["id"] for h in sightings if clearance_m(
+        detour["geometry"]["coordinates"], [h["longitude"], h["latitude"]]) <= h["radius_m"]]
+    if sightings_on_route and not avoided and not left_out:
+        explanation = sighting_explanation(len(sightings_on_route))
     return {
         "safe": {"geometry": detour["geometry"], **detour["properties"], "hazards_avoided": avoided},
         "normal": {"geometry": normal["geometry"], **normal["properties"], "hazards_crossed": crossed},
         "has_detour": detour["geometry"] != normal["geometry"],
         "extra_minutes": extra, "explanation": explanation, "left_out": left_out,
         "endpoint_reports": endpoint_reports,
+        "sightings_on_route": sightings_on_route,
     }
 
 

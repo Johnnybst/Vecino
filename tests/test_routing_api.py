@@ -52,7 +52,8 @@ class RouteApiTests(unittest.TestCase):
             response = self.client.post("/route", json=TRIP)
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(set(data), {"safe", "normal", "has_detour", "extra_minutes", "explanation", "left_out", "endpoint_reports"})
+        self.assertEqual(set(data), {"safe", "normal", "has_detour", "extra_minutes", "explanation", "left_out",
+                                     "endpoint_reports", "sightings_on_route"})
         self.assertIs(data["has_detour"], True)
         self.assertEqual(data["endpoint_reports"], {"origin": [], "destination": []})
         self.assertEqual(data["safe"]["hazards_avoided"], ["hz_demo_1"])

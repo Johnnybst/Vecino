@@ -18,11 +18,11 @@ class SeverityTests(unittest.TestCase):
     def test_severity_properties_match_drawn_radius(self):
         now = datetime.now(timezone.utc)
         for count, confidence, severity, radius in (
-            (1, 0.65, "low", 75),
-            (2, 0.65, "medium", 90),
-            (3, 0.84, "medium", 90),
-            (4, 0.65, "high", 100),
-            (1, 0.85, "high", 100),
+            (1, 0.65, "low", 100),
+            (2, 0.65, "medium", 100),
+            (3, 0.84, "medium", 100),
+            (4, 0.65, "high", 250),
+            (1, 0.85, "high", 250),
         ):
             with self.subTest(count=count, confidence=confidence):
                 report = {
@@ -105,8 +105,10 @@ class LiveHazardsTests(unittest.TestCase):
                 self.assertEqual(any(f["properties"]["id"] == "hz_1" for f in features), included)
                 self.assertEqual(self.path.read_bytes(), before)
 
-    def test_time_preview_fades_all_reports(self):
-        self.assertEqual(get_hazards(self.now + timedelta(hours=4))["features"], [])
+    def test_time_preview_keeps_only_critical_after_three_hours(self):
+        later = get_hazards(self.now + timedelta(hours=4))["features"]
+        self.assertTrue(later)
+        self.assertEqual({f["properties"]["severity"] for f in later}, {"high"})
 
     def test_missing_database_is_not_created_or_replaced_with_demo(self):
         missing = Path(self.temp.name) / "missing.db"

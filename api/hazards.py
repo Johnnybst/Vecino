@@ -13,13 +13,23 @@ SEED_FILE = ROOT / "data" / "seed_reports.json"
 DEMO_STARTED_AT = datetime.now(timezone.utc)
 
 
+# Map labels: high = Critical, medium = Moderate, low = Observed (green).
+# A Miami block is about 100 m. Routing adds its own 300 m gap on top.
+SEVERITY_RADIUS_M = {"high": 250, "medium": 100, "low": 100}
+# Observed sightings only warn the traveler; they never cause a detour.
+REROUTE = {"high": True, "medium": True, "low": False}
+# Moderate and Observed leave the map after 3 hours. Critical only grays out.
+SHORT_LIVED_MINUTES = 180
+
+
 def severity_and_radius(report_count, confidence):
-    # About 1-2 Miami blocks across (150-200 m); routing adds its own 300 m gap on top.
     if report_count >= 4 or confidence >= 0.85:
-        return "high", 100
-    if report_count >= 2:
-        return "medium", 90
-    return "low", 75
+        severity = "high"
+    elif report_count >= 2:
+        severity = "medium"
+    else:
+        severity = "low"
+    return severity, SEVERITY_RADIUS_M[severity]
 
 
 def parse_time(value):
@@ -113,11 +123,12 @@ def reports_to_hazards(reports, at=None):
         confidence = report["confidence_score"]
         weight = confidence * math.exp(-age_minutes / 90)
 
-        if weight < 0.1:
-            continue
-
         count = report["source_count"]
         severity, radius_m = severity_and_radius(count, confidence)
+
+        # Critical stays (grayed) for the whole 6-hour window; the rest go after 3 hours.
+        if severity != "high" and age_minutes >= SHORT_LIVED_MINUTES:
+            continue
 
         features.append({
             "type": "Feature",
@@ -135,6 +146,7 @@ def reports_to_hazards(reports, at=None):
                 "weight": weight,
                 "severity": severity,
                 "radius_m": radius_m,
+                "reroute": REROUTE[severity],
             },
         })
 

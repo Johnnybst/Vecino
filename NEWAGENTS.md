@@ -28,15 +28,15 @@ If a box takes twice its estimate, stop and use the shortcut listed under it.
 
 ### `GET /hazards` — two new properties on each circle
 ```json
-"properties": { "...everything from before...", "severity": "high", "radius_m": 100 }
+"properties": { "...everything from before...", "severity": "high", "radius_m": 250, "reroute": true }
 ```
-| `severity` | When | `radius_m` | Base color |
-|---|---|---|---|
-| `"low"` | 1 report | 75 | amber `#D4A017` |
-| `"medium"` | 2–3 reports | 90 | orange `#E0702A` |
-| `"high"` | 4+ reports, or confidence ≥ 0.85 | 100 | red `#D0342C` |
+| `severity` | Map label | When | `radius_m` | Color | Routes | Stays on map |
+|---|---|---|---|---|---|---|
+| `"high"` | **Critical** | 4+ reports, or confidence ≥ 0.85 | 250 (~2.5 blocks) | red `#D0342C` | detour | whole 6 h, grays out, never hidden by fading |
+| `"medium"` | **Moderate** | 2–3 reports | 100 (~1 block) | orange `#E0702A` | detour | gone at 3 h |
+| `"low"` | **Observed** | 1 report | 100 (~1 block) | green `#2E8B57` | **no detour**, notice only (`reroute: false`) | gone at 3 h |
 
-Circles are about 1–2 blocks across (150–200 m). The circle drawn by `/hazards` uses `radius_m`. Routing must use the same `radius_m` for each circle.
+The circle drawn by `/hazards` uses `radius_m`. Routing uses the same `radius_m` (plus its 300 m gap) and skips `reroute: false` circles.
 
 ### `POST /route` — new fields
 ```json
@@ -47,6 +47,7 @@ Circles are about 1–2 blocks across (150–200 m). The circle drawn by `/hazar
 }
 ```
 - `has_detour`: `true` only when the safe route is actually different from the normal one.
+- `sightings_on_route`: Observed (green) circle IDs the recommended route passes. Shown as a calm notice; never avoided.
 - `risk_score`: 0–1, or `null` until the road-risk layer exists (Person 4, bonus).
 
 ### `GET /incidents` — live crashes and closures (built, Person 4)

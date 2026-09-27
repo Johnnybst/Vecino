@@ -18,6 +18,7 @@ export type Hazard = {
     weight: number
     severity?: Severity
     radius_m?: number
+    reroute?: boolean
   }
 }
 
@@ -39,6 +40,7 @@ function isHazard(value: unknown): value is Hazard {
     && Number.isFinite(properties.weight) && properties.weight >= 0 && properties.weight <= 1
     && (properties.severity === undefined || ['low', 'medium', 'high'].includes(properties.severity))
     && (properties.radius_m === undefined || (Number.isFinite(properties.radius_m) && properties.radius_m > 0))
+    && (properties.reroute === undefined || typeof properties.reroute === 'boolean')
 }
 
 export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview = false }: {
@@ -77,7 +79,9 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
           throw new Error('Invalid reports')
         }
         if (disposed) return
-        const visible = data.features.filter((feature) => feature.properties.weight >= 0.1)
+        // Critical reports gray out but stay; the server already drops the rest after 3 hours.
+        const visible = data.features.filter((feature) => feature.properties.weight >= 0.1
+          || reportSeverity(feature.properties) === 'high')
         setHazards(visible)
         onHazardsChange(visible)
         setUpdatedAt(at ? Date.parse(at) : Date.now())

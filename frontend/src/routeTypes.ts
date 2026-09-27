@@ -14,6 +14,8 @@ export type RouteResponse = {
   explanation: { en: string; es: string; ht: string }
   left_out: string[]
   endpoint_reports?: { origin: string[]; destination: string[] }
+  // Observed (green) areas on the route: a notice only, never avoided.
+  sightings_on_route?: string[]
 }
 
 export type RouteResult = { data: RouteResponse; hazards: Hazard[] }
@@ -47,4 +49,5 @@ export function isRouteResponse(value: unknown): value is RouteResponse {
     && (route.endpoint_reports === undefined || (
       !!route.endpoint_reports && isIds(route.endpoint_reports.origin)
       && isIds(route.endpoint_reports.destination)))
+    && (route.sightings_on_route === undefined || isIds(route.sightings_on_route))
 }

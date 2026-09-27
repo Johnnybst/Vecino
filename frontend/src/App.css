@@ -235,6 +235,12 @@
   color: #573b0b;
 }
 
+.sighting-notice {
+  border-color: #2e8b57;
+  background: #e8f5ee;
+  color: #1d4d33;
+}
+
 .route-warning strong {
   display: block;
   margin-bottom: 6px;

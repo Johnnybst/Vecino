@@ -1,6 +1,7 @@
 import type { Hazard } from './HazardsLayer'
 
-export const severityColors = { low: '#D4A017', medium: '#E0702A', high: '#D0342C' }
+// low = Observed (green, warning only), medium = Moderate, high = Critical.
+export const severityColors = { low: '#2E8B57', medium: '#E0702A', high: '#D0342C' }
 export type Severity = keyof typeof severityColors
 export const severitySymbols = { low: '●', medium: '◆', high: '▲' }
 

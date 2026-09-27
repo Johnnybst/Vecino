@@ -50,6 +50,12 @@ export function RouteLayer({ result }: { result: RouteResult }) {
             <p>{t.leftOut}</p>
           </div>
         )}
+        {!!route.sightings_on_route?.length && (
+          <div className="route-warning sighting-notice" role="status">
+            <strong>{t.sightingsTitle}</strong>
+            <p>{t.sightingsText(route.sightings_on_route.length)}</p>
+          </div>
+        )}
         <p className="demo-notice">{demoMode ? t.routeNotice : t.liveRouteNotice}</p>
         <h2>{hasDetour ? t.routeHeadline(route.extra_minutes, avoided.size) : t.usualRoute}</h2>
         <p>{route.explanation[language]}</p>
