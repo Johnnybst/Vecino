@@ -4,6 +4,7 @@ export type Language = 'en' | 'es' | 'ht'
 export const languageNames: Record<Language, string> = { en: 'English', es: 'Español', ht: 'Kreyòl' }
 
 const en = {
+  traffic: 'Traffic', reportLevels: 'Reported activity levels', severityLabels: { low: 'Low', medium: 'Medium', high: 'High' },
   outsideArea: 'Vecino covers Miami-Dade only.', previewOnly: 'Demo time changes reports only. Routes stay as requested.',
   loadingLiveReports: 'Loading reports...', liveRouteNotice: 'Routes based on reported activity',
   liveReportsStatus: (n: number) => `Reported activity: ${n} ${n === 1 ? 'area' : 'areas'}. Refreshes every minute.`,
@@ -62,6 +63,7 @@ type Messages = typeof en
 export type TextKey = { [K in keyof Messages]: Messages[K] extends string ? K : never }[keyof Messages]
 
 const es: Messages = {
+  traffic: 'Tráfico', reportLevels: 'Niveles de actividad reportada', severityLabels: { low: 'Bajo', medium: 'Medio', high: 'Alto' },
   outsideArea: 'Vecino solo cubre Miami-Dade.', previewOnly: 'El tiempo de demostración solo cambia los reportes, no las rutas.',
   loadingLiveReports: 'Cargando reportes...', liveRouteNotice: 'Rutas basadas en actividad reportada',
   liveReportsStatus: (n) => `Actividad reportada: ${n} ${n === 1 ? 'zona' : 'zonas'}. Se actualiza cada minuto.`,
@@ -117,6 +119,7 @@ const es: Messages = {
 }
 
 const ht: Messages = {
+  traffic: 'Trafik', reportLevels: 'Nivo aktivite rapòte', severityLabels: { low: 'Ba', medium: 'Mwayen', high: 'Wo' },
   outsideArea: 'Vecino kouvri Miami-Dade sèlman.', previewOnly: 'Tan demonstrasyon an chanje rapò yo sèlman, pa wout yo.',
   loadingLiveReports: 'N ap chaje rapò yo...', liveRouteNotice: 'Wout ki baze sou aktivite rapòte',
   liveReportsStatus: (n) => `Aktivite rapòte: ${n} zòn. Yo mete ajou chak minit.`,

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { InfoWindow, useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import { reportSummary, useI18n } from './i18n'
 import { demoMode } from './config'
+import { reportColor, reportSeverity, severitySymbols } from './reportStyle'
+import type { Severity } from './reportStyle'
 
 export type Hazard = {
   type: 'Feature'
@@ -13,6 +15,8 @@ export type Hazard = {
     confidence: number
     report_count: number
     weight: number
+    severity?: Severity
+    radius_m?: number
   }
 }
 
@@ -32,6 +36,8 @@ function isHazard(value: unknown): value is Hazard {
     && Number.isFinite(properties.confidence) && properties.confidence >= 0 && properties.confidence <= 1
     && Number.isInteger(properties.report_count) && properties.report_count >= 0
     && Number.isFinite(properties.weight) && properties.weight >= 0 && properties.weight <= 1
+    && (properties.severity === undefined || ['low', 'medium', 'high'].includes(properties.severity))
+    && (properties.radius_m === undefined || (Number.isFinite(properties.radius_m) && properties.radius_m > 0))
 }
 
 export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview = false }: {
@@ -101,9 +107,9 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
       const circle = new maps.Polygon({
         map,
         paths: feature.geometry.coordinates.map((ring) => ring.map(([lng, lat]) => ({ lat, lng }))),
-        fillColor: '#b85f61',
+        fillColor: reportColor(feature.properties, updatedAt),
         fillOpacity: 0.15 + 0.45 * feature.properties.weight,
-        strokeColor: '#a95356',
+        strokeColor: reportColor(feature.properties, updatedAt),
         strokeWeight: 2,
         zIndex: 1,
       })
@@ -114,7 +120,7 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
       listener.remove()
       circle.setMap(null)
     })
-  }, [map, maps, hazards])
+  }, [map, maps, hazards, updatedAt])
 
   const selected = hazards.find((feature) => feature.properties.id === selectedId)
   const ring = selected?.geometry.coordinates[0].slice(0, -1)
@@ -135,6 +141,7 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
         <InfoWindow position={position} headerContent={demoMode ? t.activityDemo : t.reportedArea} maxWidth={260}
           onCloseClick={() => setSelectedId(null)}>
           <div className="report-popup">
+            <p><span aria-hidden="true" style={{ color: reportColor(selected.properties, updatedAt) }}>{severitySymbols[reportSeverity(selected.properties)]}</span> {t.severityLabels[reportSeverity(selected.properties)]}</p>
             <p>{reportSummary(selected.properties.summary, selected.properties.report_count, language)}</p>
             <p>{t.areaReports(selected.properties.report_count)}</p>
             <p>{t.reportAge(Math.max(0, Math.floor((updatedAt - Date.parse(selected.properties.reported_at)) / 60000)))}</p>

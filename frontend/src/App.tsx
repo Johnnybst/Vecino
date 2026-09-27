@@ -10,6 +10,8 @@ import type { RouteResult } from './routeTypes'
 import { I18nContext, messages, useI18n } from './i18n'
 import type { Language, TextKey } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
+import { TrafficLayer } from './TrafficLayer'
+import { SeverityLegend } from './SeverityLegend'
 import { TimeSlider } from './TimeSlider'
 
 import { demoMode } from './config'
@@ -97,7 +99,7 @@ function AddressInput({ kind, onSelect }: {
 
   return (
     <div className="address-field">
-      <span className="address-label">{t[kind]}</span>
+      <span className="address-label"><span aria-hidden="true">{kind === 'from' ? '●' : '⚑'}</span> {t[kind]}</span>
       <div ref={container} />
       <p className="address-status" role="status">
         {places ? (message ? t[message] : '') : t.loadingAddress}
@@ -271,6 +273,7 @@ function AddressPanel({ onShowDemo, onRoute, hazards }: {
 function App() {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY
   const [showDemo, setShowDemo] = useState(false)
+  const [traffic, setTraffic] = useState(false)
   const [minutes, setMinutes] = useState(0)
   const [previewAt, setPreviewAt] = useState<string | undefined>()
   useEffect(() => {
@@ -312,7 +315,12 @@ function App() {
         {showDemo && <DemoMap onClose={() => setShowDemo(false)} />}
         {!showDemo && <HazardsLayer key={previewAt ?? 'now'} at={previewAt}
           onHazardsChange={previewAt ? ignorePreviewReports : setHazards} hideStatus={route !== null} />}
+        <TrafficLayer enabled={traffic && !showDemo} />
         {!showDemo && <div className="bottom-stack">
+          <div className="map-tools">
+            <label><input type="checkbox" checked={traffic} onChange={(event) => setTraffic(event.target.checked)} />{t.traffic}</label>
+            <SeverityLegend />
+          </div>
           {demoMode && <TimeSlider minutes={minutes} onChange={setMinutes} />}
           {route && <RouteLayer result={route} onEdit={() => { setRoute(null); setMinutes(0); setPreviewAt(undefined) }} />}
         </div>}

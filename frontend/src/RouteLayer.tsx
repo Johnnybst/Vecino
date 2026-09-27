@@ -3,6 +3,7 @@ import { useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import type { RouteResult } from './routeTypes'
 import { useI18n } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
+import { TripMarkers } from './TripMarkers'
 import { demoMode } from './config'
 
 export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: () => void }) {
@@ -39,7 +40,7 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
     for (const line of [route.safe, route.normal]) {
       line.geometry.coordinates.forEach((point) => bounds.extend(toPoint(point)))
     }
-    map.fitBounds(bounds, { top: 135, right: 40, bottom: 280, left: 40 })
+    map.fitBounds(bounds, { top: 135, right: 40, bottom: Math.min(460, map.getDiv().clientHeight * 0.58), left: 40 })
     return () => {
       normal?.setMap(null)
       safe.setMap(null)
@@ -55,6 +56,7 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
 
   return (
     <>
+      <TripMarkers coordinates={route.safe.geometry.coordinates} />
       <div className="demo-heading">
         <strong>Vecino · {t.yourRoutes}</strong>
         <div className="heading-controls"><LanguageSelect />
