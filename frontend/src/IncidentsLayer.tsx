@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { InfoWindow, Marker } from '@vis.gl/react-google-maps'
 import { useI18n } from './i18n'
+import { incidentText } from './incidentText'
 
 const incidentSymbols = { crash: '◆', stalled_vehicle: '■', road_closed: '⊗', lane_closed: '▥' }
 type IncidentType = keyof typeof incidentSymbols
@@ -24,7 +25,7 @@ function isIncident(value: unknown): value is Incident {
 }
 
 export function IncidentsLayer() {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -70,8 +71,9 @@ export function IncidentsLayer() {
       icon={{ path: 'M -11,-11 L 11,-11 L 11,11 L -11,11 Z', fillColor: '#36576c', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }}
       onClick={() => setSelectedId(item.properties.id)} />)}
     {selected && <InfoWindow position={{ lng: selected.geometry.coordinates[0], lat: selected.geometry.coordinates[1] }}
-      headerContent={t.incidentTypes[selected.properties.type]} maxWidth={250} onCloseClick={() => setSelectedId(null)}>
-      <div className="report-popup"><p>{selected.properties.description}</p>
+      headerContent={<strong className="incident-popup-title"><span aria-hidden="true">{incidentSymbols[selected.properties.type]}</span> {t.incidentTypes[selected.properties.type]}</strong>}
+      maxWidth={260} onCloseClick={() => setSelectedId(null)}>
+      <div className="report-popup"><p>{incidentText(selected.properties.description, language)}</p>
         <p>{t.incidentAge(Math.max(0, Math.floor((now - Date.parse(selected.properties.started_at)) / 60000)))}</p>
         <p>{t.incidentsNotice}</p></div>
     </InfoWindow>}

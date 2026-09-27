@@ -18,6 +18,7 @@ function reportDuration(totalMinutes: number, language: Language): string {
 export const languageNames: Record<Language, string> = { en: 'English', es: 'Español', ht: 'Kreyòl' }
 
 const en = {
+  incidentLocation: { NOF: 'north of', SOF: 'south of', EOF: 'east of', WOF: 'west of', NB: 'northbound', SB: 'southbound', EB: 'eastbound', WB: 'westbound', ST: 'Street', AVE: 'Avenue', RD: 'Road', BLVD: 'Boulevard', TPKE: 'Turnpike', PKWY: 'Parkway', at: 'at', mileMarker: 'mile marker' },
   incidents: 'Road incidents', incidentsLoading: 'Loading road incidents...', incidentsUnavailable: 'Road incidents are unavailable.',
   incidentsNotice: 'Live incidents. Routes do not avoid these icons.', incidentsEmpty: 'No incidents returned. Roads may still have disruptions.',
   incidentTypes: { crash: 'Crash', stalled_vehicle: 'Stopped vehicle', road_closed: 'Road closed', lane_closed: 'Lane closed' },
@@ -81,6 +82,7 @@ type Messages = typeof en
 export type TextKey = { [K in keyof Messages]: Messages[K] extends string ? K : never }[keyof Messages]
 
 const es: Messages = {
+  incidentLocation: { NOF: 'al norte de', SOF: 'al sur de', EOF: 'al este de', WOF: 'al oeste de', NB: 'hacia el norte', SB: 'hacia el sur', EB: 'hacia el este', WB: 'hacia el oeste', ST: 'Street', AVE: 'Avenue', RD: 'Road', BLVD: 'Boulevard', TPKE: 'Turnpike', PKWY: 'Parkway', at: 'en', mileMarker: 'marcador de milla' },
   incidents: 'Incidentes viales', incidentsLoading: 'Cargando incidentes viales...', incidentsUnavailable: 'Los incidentes viales no están disponibles.',
   incidentsNotice: 'Incidentes en vivo. Las rutas no evitan estos iconos.', incidentsEmpty: 'No se recibieron incidentes. Aún puede haber interrupciones.',
   incidentTypes: { crash: 'Choque', stalled_vehicle: 'Vehículo detenido', road_closed: 'Vía cerrada', lane_closed: 'Carril cerrado' },
@@ -141,6 +143,7 @@ const es: Messages = {
 }
 
 const ht: Messages = {
+  incidentLocation: { NOF: 'nan nò', SOF: 'nan sid', EOF: 'nan lès', WOF: 'nan lwès', NB: 'nan direksyon nò', SB: 'nan direksyon sid', EB: 'nan direksyon lès', WB: 'nan direksyon lwès', ST: 'Street', AVE: 'Avenue', RD: 'Road', BLVD: 'Boulevard', TPKE: 'Turnpike', PKWY: 'Parkway', at: 'nan', mileMarker: 'makè mil' },
   incidents: 'Ensidan sou wout', incidentsLoading: 'N ap chaje ensidan yo...', incidentsUnavailable: 'Ensidan sou wout yo pa disponib.',
   incidentsNotice: 'Ensidan aktyèl. Wout yo pa evite ikon sa yo.', incidentsEmpty: 'Pa gen ensidan ki retounen. Ka toujou gen pwoblèm sou wout la.',
   incidentTypes: { crash: 'Kolizyon', stalled_vehicle: 'Machin kanpe', road_closed: 'Wout fèmen', lane_closed: 'Vwa fèmen' },

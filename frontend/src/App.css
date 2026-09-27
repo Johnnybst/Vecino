@@ -373,6 +373,12 @@
   font: 14px/1.5 system-ui, 'Segoe UI', sans-serif;
 }
 
+.incident-popup-title {
+  color: #20392b;
+  font: 600 15px/1.5 system-ui, 'Segoe UI', sans-serif;
+}
+.incident-popup-title span { color: #36576c; margin-right: 4px; }
+
 .report-popup p {
   margin: 0 0 8px;
 }
