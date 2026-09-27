@@ -1,9 +1,13 @@
 import type { Hazard } from './HazardsLayer'
 
-type RouteLine = {
+// One turn: its text and the index of the line point where it happens.
+export type RouteStep = { instruction: string; at: number }
+
+export type RouteLine = {
   geometry: { type: 'LineString'; coordinates: [number, number][] }
   duration_s: number
   distance_m: number
+  steps?: RouteStep[]
 }
 
 export type RouteResponse = {
@@ -30,6 +34,9 @@ function isLine(value: unknown): value is RouteLine {
       && Number.isFinite(point[1]) && Math.abs(point[1]) <= 90)
     && Number.isFinite(line.duration_s) && line.duration_s >= 0
     && Number.isFinite(line.distance_m) && line.distance_m >= 0
+    && (line.steps === undefined || (Array.isArray(line.steps) && line.steps.every((step) =>
+      typeof step?.instruction === 'string' && Number.isInteger(step.at)
+      && step.at >= 0 && step.at < line.geometry.coordinates.length)))
 }
 
 const isIds = (value: unknown): value is string[] =>

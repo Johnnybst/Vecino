@@ -36,7 +36,10 @@ class TomTomRoutingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(request.url.params["travelMode"], "car")
         self.assertIn("25.76,-80.3:25.76,-80.2", request.url.path)
         self.assertEqual(route["geometry"]["coordinates"], [[-80.30, 25.76], [-80.20, 25.76]])
-        self.assertEqual(route["properties"], {"duration_s": 900, "distance_m": 8000, "traffic_delay_s": 120})
+        self.assertEqual(route["properties"], {"duration_s": 900, "distance_m": 8000, "traffic_delay_s": 120,
+                                               "steps": []})
+        self.assertEqual(request.url.params["instructionsType"], "text")
+        self.assertEqual(request.url.params["language"], "en-US")
 
     async def test_areas_become_rectangles_and_walking_skips_traffic(self):
         circle = [circle_ring([-80.25, 25.76], 400)]

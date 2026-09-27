@@ -5,8 +5,14 @@ import { useI18n } from './i18n'
 import { TripMarkers } from './TripMarkers'
 import { MapGeometry } from './MapGeometry'
 import { demoMode } from './config'
+import { lineAhead } from './nav'
+import type { Progress } from './nav'
 
-export function RouteLayer({ result }: { result: RouteResult }) {
+export function RouteLayer({ result, progress }: {
+  result: RouteResult
+  // While following: where you are on the green route, so the part behind you is erased.
+  progress?: Progress | null
+}) {
   const { t, language } = useI18n()
   const map = useMap()
   const maps = useMapsLibrary('maps')
@@ -28,10 +34,12 @@ export function RouteLayer({ result }: { result: RouteResult }) {
   }, [map, maps, core, route, hasDetour])
 
   // Usual route first so it sits under the green one, like Google's alternate routes.
+  const safeLine = route.safe.geometry.coordinates
+  const ahead = progress && progress.index < safeLine.length - 1 ? lineAhead(safeLine, progress) : null
   const shapes = useMemo(() => [
     ...(hasDetour ? [{ id: 'normal', rings: [route.normal.geometry.coordinates], color: '#dadce0', muted: true }] : []),
-    { id: 'safe', rings: [route.safe.geometry.coordinates], color: '#24764c' },
-  ], [route, hasDetour])
+    { id: 'safe', rings: [ahead ?? safeLine], color: '#24764c', still: !!ahead },
+  ], [route, hasDetour, ahead, safeLine])
 
   const avoided = new Set(route.safe.hazards_avoided)
   const nearStart = !!route.endpoint_reports?.origin.length

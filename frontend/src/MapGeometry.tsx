@@ -8,6 +8,8 @@ export type MapShape = {
   fillOpacity?: number
   // Google-style alternate route: wide, soft and see-through, drawn under the main one.
   muted?: boolean
+  // Redrawn often (the route shrinking as you move): skip the draw-in animation.
+  still?: boolean
 }
 
 // SVG follows Google's projection on pan/zoom; only CSS performs animations.
@@ -44,7 +46,8 @@ export function MapGeometry({ shapes, polygons = false }: { shapes: MapShape[]; 
       path.setAttribute('fill-rule', 'evenodd')
       path.setAttribute('stroke-linejoin', 'round')
       path.setAttribute('stroke-linecap', 'round')
-      path.setAttribute('class', polygons ? 'report-shape' : shape.muted ? 'usual-shape' : 'route-shape')
+      path.setAttribute('class', polygons ? 'report-shape' : shape.muted ? 'usual-shape'
+        : shape.still ? 'route-shape no-draw' : 'route-shape')
       if (!polygons && !shape.muted) path.setAttribute('pathLength', '1')
       svg.appendChild(path)
       return { path, casing }

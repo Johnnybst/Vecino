@@ -1,45 +1,42 @@
-// Follow-me mode: a blue "you are here" dot that the map keeps centered.
-// Location stays on this device; nothing here is sent to the server.
+// Follow-me mode: a blue "you are here" dot the map keeps centered, the route behind you erased,
+// and a small card with the next turn, time left and arrival time.
+// Location stays on this device except for "New route from here", which the person taps.
 import { useEffect, useRef, useState } from 'react'
 import { Marker, useMap } from '@vis.gl/react-google-maps'
 import { useI18n } from './i18n'
 import type { TextKey } from './i18n'
+import { metresAhead, progressOnLine } from './nav'
+import type { Progress } from './nav'
+import type { RouteLine } from './routeTypes'
 
 type Spot = { lat: number; lng: number }
 
 const OFF_ROUTE_M = 50
 const OFF_ROUTE_READINGS = 3
 
-// Closest distance in metres from a spot to a [lng, lat] line (flat-earth is fine at city scale).
-function distanceToLine(spot: Spot, line: [number, number][]) {
-  const toXY = ([lng, lat]: [number, number]) => [
-    (lng - spot.lng) * 111320 * Math.cos(spot.lat * Math.PI / 180), (lat - spot.lat) * 111320]
-  let closest = Infinity
-  for (let i = 1; i < line.length; i += 1) {
-    const [ax, ay] = toXY(line[i - 1]), [bx, by] = toXY(line[i])
-    const dx = bx - ax, dy = by - ay, lengthSq = dx * dx + dy * dy
-    const t = lengthSq ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSq)) : 0
-    closest = Math.min(closest, Math.hypot(ax + t * dx, ay + t * dy))
-  }
-  return closest
-}
-
-export function FollowMe({ line, onRecalculate }: {
-  line?: [number, number][]
+export function FollowMe({ route, onProgress, onRecalculate }: {
+  route?: RouteLine
+  // Where you are along the route (null when not following), so the map can erase the part behind you.
+  onProgress: (progress: Progress | null) => void
   // Asks for a new route from this spot; returns '' or the message to show.
   onRecalculate?: (from: Spot) => Promise<TextKey | ''>
 }) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const map = useMap()
   const [following, setFollowing] = useState(false)
   const [spot, setSpot] = useState<Spot | null>(null)
+  const [progress, setProgress] = useState<Progress | null>(null)
+  // Time of the latest location reading; the arrival time counts from it.
+  const [fixAt, setFixAt] = useState(0)
   const [message, setMessage] = useState<TextKey | ''>('')
   const [offRoute, setOffRoute] = useState(false)
   const [recalculating, setRecalculating] = useState(false)
   const misses = useRef(0)
   const firstFix = useRef(true)
-  const lineRef = useRef(line)
-  useEffect(() => { lineRef.current = line }, [line])
+  const routeRef = useRef(route)
+  const onProgressRef = useRef(onProgress)
+  useEffect(() => { routeRef.current = route }, [route])
+  useEffect(() => { onProgressRef.current = onProgress }, [onProgress])
 
   useEffect(() => {
     if (!following) return
@@ -49,22 +46,30 @@ export function FollowMe({ line, onRecalculate }: {
       ({ coords }) => {
         const next = { lat: coords.latitude, lng: coords.longitude }
         setSpot(next)
+        setFixAt(Date.now())
         setMessage('')
         if (map) {
           map.panTo(next)
           if (firstFix.current) map.setZoom(Math.max(map.getZoom() ?? 16, 16))
         }
         firstFix.current = false
-        // Off the green route for a few readings in a row? Say so (no automatic rerouting).
-        const route = lineRef.current
-        misses.current = route && route.length >= 2 && distanceToLine(next, route) > OFF_ROUTE_M
-          ? misses.current + 1 : 0
-        setOffRoute(misses.current >= OFF_ROUTE_READINGS)
+        const line = routeRef.current?.geometry.coordinates
+        const here = line && line.length >= 2 ? progressOnLine(next, line) : null
+        // Off the green route for a few readings in a row? Offer a new route (no automatic rerouting).
+        misses.current = here && here.offRouteM > OFF_ROUTE_M ? misses.current + 1 : 0
+        const off = misses.current >= OFF_ROUTE_READINGS
+        setOffRoute(off)
+        // Only erase the route behind you while you are actually on it.
+        const onRoute = here && here.offRouteM <= OFF_ROUTE_M ? here : null
+        setProgress(onRoute)
+        onProgressRef.current(onRoute)
       },
       (error) => {
         setMessage(error.code === 1 ? 'locationDenied' : 'locationFailed')
         setFollowing(false)
         setSpot(null)
+        setProgress(null)
+        onProgressRef.current(null)
       },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
     )
@@ -83,6 +88,8 @@ export function FollowMe({ line, onRecalculate }: {
     } else {
       misses.current = 0
       setOffRoute(false)
+      setProgress(null)
+      onProgress(null)
     }
   }
 
@@ -92,12 +99,33 @@ export function FollowMe({ line, onRecalculate }: {
       setSpot(null)
       setMessage('')
       setOffRoute(false)
+      setProgress(null)
+      onProgress(null)
     } else if (!navigator.geolocation) {
       setMessage('locationUnavailable')
     } else {
       setMessage('locating')
       setFollowing(true)
     }
+  }
+
+  // Next turn, time left and arrival time, from where you are on the route.
+  const line = route?.geometry.coordinates
+  const usable = following && !offRoute && route && line && progress && progress.index < line.length - 1
+  let card = null
+  if (usable) {
+    const nextStep = route.steps?.find((step) => step.at > progress.index)
+    const toTurn = nextStep ? metresAhead(line, progress, nextStep.at) : 0
+    const left = metresAhead(line, progress)
+    const secondsLeft = route.distance_m > 0 ? left * route.duration_s / route.distance_m : 0
+    const arrival = new Date(fixAt + secondsLeft * 1000)
+      .toLocaleTimeString(language === 'ht' ? 'fr-HT' : language, { hour: 'numeric', minute: '2-digit' })
+    card = <div className="nav-card" role="status" aria-live="polite">
+      {nextStep
+        ? <p className="nav-turn"><strong>{t.inDistance(toTurn)}</strong> {nextStep.instruction}</p>
+        : <p className="nav-turn"><strong>{t.almostThere}</strong></p>}
+      <p className="nav-eta">{t.timeLeft(Math.max(1, Math.round(secondsLeft / 60)), left, arrival)}</p>
+    </div>
   }
 
   return <>
@@ -109,7 +137,8 @@ export function FollowMe({ line, onRecalculate }: {
         <span aria-hidden="true">◎</span> {following ? t.stopFollowing : t.followMe}
       </button>
       {message && <p className="follow-status" role="status">{t[message]}</p>}
-      {following && offRoute && line && <div className="follow-status off-route" role="alert">
+      {card}
+      {following && offRoute && route && <div className="follow-status off-route" role="alert">
         <p>{onRecalculate ? t.offRoute : t.offRouteEdit}</p>
         {onRecalculate && <button type="button" className="sample-button" onClick={newRouteHere}
           disabled={recalculating}>{recalculating ? t.findingRoutes : t.newRouteHere}</button>}
