@@ -91,7 +91,7 @@ class BaseCollector(ABC):
                 # Pre-filter stale reports so they never hit the queue
                 now = datetime.now(timezone.utc)
                 is_trusted = self.name in ("iceout", "stopice")
-                max_age = timedelta(hours=6) if is_trusted else timedelta(
+                max_age = timedelta(hours=24 if self.name == "iceout" else 6) if is_trusted else timedelta(
                     seconds=self.config.report_max_age_seconds
                 )
                 fresh = [r for r in reports if (now - r.timestamp) <= max_age]

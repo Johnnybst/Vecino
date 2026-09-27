@@ -103,7 +103,7 @@ class Database:
             self._db = None
 
     async def insert_raw_report(self, report: RawReport) -> int | None:
-        """Insert a raw report. Returns the row id, or None if duplicate."""
+        """Insert a report; refresh IceOut duplicates without reprocessing their cluster."""
         try:
             cursor = await self._db.execute(
                 """INSERT INTO raw_reports
@@ -124,7 +124,15 @@ class Database:
             await self._db.commit()
             return cursor.lastrowid
         except aiosqlite.IntegrityError:
-            # Duplicate source_type + source_id
+            # Refresh source labels without counting the report twice or making it newer.
+            if report.source_type == "iceout":
+                await self._db.execute(
+                    """UPDATE raw_reports SET raw_metadata = ?, original_text = ?, collected_at = ?
+                       WHERE source_type = 'iceout' AND source_id = ?""",
+                    (json.dumps(report.raw_metadata), report.text,
+                     report.collected_at.isoformat(), report.source_id),
+                )
+                await self._db.commit()
             return None
 
     async def update_report_processing(

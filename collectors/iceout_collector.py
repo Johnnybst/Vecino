@@ -474,7 +474,6 @@ class IceoutCollector(BaseCollector):
 
         reports: list[RawReport] = []
         mpls_count = 0
-        skipped_seen = 0
         skipped_stale = 0
 
         for item in data:
@@ -488,9 +487,8 @@ class IceoutCollector(BaseCollector):
                 continue
 
             source_id = f"iceout_{report_id}"
-            if not self._is_new(source_id):
-                skipped_seen += 1
-                continue
+            # Revisit existing IDs: IceOut can change their category/status.
+            # Storage refreshes metadata while retaining the original cluster.
 
             # Parse timestamps
             incident_time_str = item.get("incident_time")
@@ -570,18 +568,16 @@ class IceoutCollector(BaseCollector):
 
         if reports:
             logger.info(
-                "[iceout] Found %d NEW locale-area reports (of %d total, %d in area, %d already seen)",
+                "[iceout] Fetched %d locale-area reports for insert or refresh (of %d total, %d in area)",
                 len(reports),
                 len(data),
                 mpls_count,
-                skipped_seen,
             )
         else:
             logger.info(
-                "[iceout] No new reports (%d total, %d in locale area, %d already seen)",
+                "[iceout] No new reports (%d total, %d in locale area)",
                 len(data),
                 mpls_count,
-                skipped_seen,
             )
 
         return reports
