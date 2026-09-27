@@ -120,7 +120,9 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
         strokeOpacity: 0,
         zIndex: 1,
       })
-      const listener = circle.addListener('click', () => setSelectedId(feature.properties.id))
+      const listener = circle.addListener('click', () => {
+        setSelectedId(current => current === feature.properties.id ? null : feature.properties.id)
+      })
       return { circle, listener }
     })
     return () => circles.forEach(({ circle, listener }) => {
@@ -155,7 +157,7 @@ export function HazardsLayer({ onHazardsChange, hideStatus = false, at, preview 
       {selected && position && (
         <InfoWindow position={position} headerContent={demoMode ? t.activityDemo : t.reportedArea} maxWidth={260}
           onCloseClick={() => setSelectedId(null)}>
-          <div className="report-popup">
+          <div className="report-popup" onClick={() => setSelectedId(null)}>
             <p><span aria-hidden="true" style={{ color: reportColor(selected.properties, updatedAt) }}>{severitySymbols[reportSeverity(selected.properties)]}</span> {t.severityLabels[reportSeverity(selected.properties)]}</p>
             <p>{reportSummary(selected.properties.summary, selected.properties.report_count, language)}</p>
             <p>{t.areaReports(selected.properties.report_count)}</p>

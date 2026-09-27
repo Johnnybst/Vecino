@@ -34,7 +34,8 @@ export function DemoMap({ onClose }: { onClose: () => void }) {
       zIndex: 1,
     }))
     const listeners = circles.map((circle, index) => circle.addListener('click', () => {
-      setSelectedReport(demoHazards.features[index])
+      const report = demoHazards.features[index]
+      setSelectedReport(current => current?.properties.id === report.properties.id ? null : report)
     }))
     // Google-style alternate: light gray with a darker outline, under the green route.
     const normalCasing = new maps.Polyline({
@@ -96,7 +97,7 @@ export function DemoMap({ onClose }: { onClose: () => void }) {
           headerContent={t.sampleArea}
           maxWidth={260}
         >
-          <div className="report-popup">
+          <div className="report-popup" onClick={() => setSelectedReport(null)}>
             <p>{t.sampleSummary}</p>
             <p>{t.areaReports(selectedProperties.report_count)}</p>
             <p>{t.reportAge(Math.max(0, Math.floor((now - Date.parse(selectedProperties.reported_at)) / 60000)))}</p>
