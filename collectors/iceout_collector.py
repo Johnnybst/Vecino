@@ -41,8 +41,8 @@ ICEOUT_API_URL = "https://iceout.org/api/report-feed"
 # Category enum to human-readable labels
 CATEGORY_LABELS = {
     0: "Critical",
-    1: "Active",
-    2: "Observed",
+    1: "Observed",
+    2: "Active",
     3: "Other",
 }
 

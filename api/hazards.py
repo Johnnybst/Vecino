@@ -41,8 +41,8 @@ def still_shown(severity, reported_at, now):
     return (now - reported_at).total_seconds() / 60 < LIFETIME_MINUTES[severity]
 
 
-# IceOut's own level for a report (category_enum): 0 Critical, 1 Active, 2 Observed (3 Other = no level).
-ICEOUT_SEVERITY = {0: "high", 1: "medium", 2: "low"}
+# IceOut's own level for a report (category_enum): 0 Critical, 1 Observed, 2 Active (3 Other = no level).
+ICEOUT_SEVERITY = {0: "high", 1: "low", 2: "medium"}
 
 
 def severity_and_radius(report_count, confidence, iceout_category=None):
@@ -77,11 +77,14 @@ def load_live_reports(at=None):
             db.row_factory = sqlite3.Row
             has_reports = db.execute(
                 "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'raw_reports'").fetchone()
-            # The most serious IceOut label among the cluster's reports (lowest number = most serious).
-            iceout = """(SELECT MIN(CAST(json_extract(r.raw_metadata, '$.category_enum') AS INTEGER))
+            # Categories are not severity-ordered: Critical (0), Active (2), Observed (1).
+            iceout = """(SELECT CAST(json_extract(r.raw_metadata, '$.category_enum') AS INTEGER)
                           FROM raw_reports r
                           WHERE r.cluster_id = clusters.id AND r.source_type = 'iceout'
-                            AND json_extract(r.raw_metadata, '$.category_enum') IN (0, 1, 2))"""                 if has_reports else "NULL"
+                            AND json_extract(r.raw_metadata, '$.category_enum') IN (0, 1, 2)
+                          ORDER BY CASE CAST(json_extract(r.raw_metadata, '$.category_enum') AS INTEGER)
+                            WHEN 0 THEN 0 WHEN 2 THEN 1 ELSE 2 END
+                          LIMIT 1)"""                 if has_reports else "NULL"
             rows = db.execute(
                 f"""SELECT id, primary_location, latitude, longitude,
                           confidence_score, source_count, latest_report,
