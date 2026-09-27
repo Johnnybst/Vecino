@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from api.hazards import get_hazards
+from api.incidents import get_incidents
 from api.routing import ROOT, build_routes, load_demo_hazards
 
 load_dotenv(ROOT / ".env")
@@ -93,3 +94,8 @@ def hazards(at: datetime | None = None):
         return get_hazards(at=at)
     except (OSError, ValueError, KeyError):
         raise HTTPException(503, "Reports unavailable. Check the report source and database settings.") from None
+
+
+@app.get("/incidents", summary="Live crashes and closures in Miami-Dade (map only, not avoided)")
+def incidents():
+    return get_incidents()

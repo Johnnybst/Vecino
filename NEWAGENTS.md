@@ -49,6 +49,20 @@ The circle drawn by `/hazards` uses `radius_m`. Routing must use the same `radiu
 - `has_detour`: `true` only when the safe route is actually different from the normal one.
 - `risk_score`: 0–1, or `null` until the road-risk layer exists (Person 4, bonus).
 
+### `GET /incidents` — live crashes and closures (built, Person 4)
+Points only, **shown on the map but never avoided by routes** (they clear too fast). Refreshes at most every 5 min.
+```json
+{ "type": "FeatureCollection",
+  "features": [{ "type": "Feature",
+    "geometry": { "type": "Point", "coordinates": [-80.1857, 25.7868] },
+    "properties": { "id": "fhp_1", "type": "crash", "description": "Vehicle Crash · I-395 EB x[BISCAYNE BLVD] [MIAMI]",
+                    "started_at": "2026-09-27T16:04:13Z", "delay_s": null, "source": "fhp" } }],
+  "properties": { "sources": ["tomtom", "fhp"], "updated_at": "..." } }
+```
+`type` is `crash`, `stalled_vehicle`, `road_closed` or `lane_closed`. Sources: TomTom (needs `TOMTOM_API_KEY`, city streets + highways)
+and Florida Highway Patrol (no key, highways). An empty list means nothing was found, not that roads are clear.
+**Person 3:** a small icon per `type`, popup with `description` and "started X min ago". Load every 5 min.
+
 ### `GET /risk` (bonus, Person 4)
 Returns `data/risk/risk_grid.geojson` — squares with `properties.score` from 0 to 1.
 
@@ -111,8 +125,8 @@ Files: `api/hazards.py`, `api/main.py`, hosting
 5. **Collector online?** Try running `main.py` on the host. If it isn't collecting Miami reports within **45 min**, stop — the demo stays on fake data.
 
 **Bonus, only if ahead**
-6. **Live road incidents** (crashes, closures) from FL511. Only if you can get a key fast. Return them from a new
-   `GET /incidents` as points with `type` and `description`. **Shortcut:** skip it; Person 3 shows Google's traffic layer instead.
+6. ~~Live road incidents~~ **Done by Person 4** (`api/incidents.py`, `GET /incidents`). Only job left for you: add
+   `TOMTOM_API_KEY` to the online server's settings.
 
 ### Person 2 — routes + follow-me
 Files: `api/routing.py`, `frontend/src/useFollowMe.ts` (new)
