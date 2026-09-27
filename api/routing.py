@@ -29,9 +29,72 @@ EXPLANATION_TIMEOUT_S = 6
 
 
 async def get_route(client, origin, destination, profile="driving-car", polygons=None):
-    """Request GeoJSON using [longitude, latitude] coordinates."""
+    """Pick the directions service. ROUTING_PROVIDER=tomtom adds live traffic; default is ORS."""
     if profile not in PROFILES:
         raise ValueError("Choose driving-car, foot-walking, or cycling-regular.")
+    if os.getenv("ROUTING_PROVIDER", "ors").strip().lower() == "tomtom":
+        return await get_tomtom_route(client, origin, destination, profile, polygons)
+    return await get_ors_route(client, origin, destination, profile, polygons)
+
+
+# TomTom travel modes; live traffic only matters for driving.
+TOMTOM_MODES = {"driving-car": "car", "foot-walking": "pedestrian", "cycling-regular": "bicycle"}
+TOMTOM_MAX_AREAS = 10
+
+
+def distance_to_trip_m(center, origin, destination):
+    """How far an area's centre is from the straight start-to-end line (for picking 10 areas)."""
+    return clearance_m([origin, destination], center)
+
+
+def avoid_rectangles(polygons, origin, destination):
+    """TomTom avoids rectangles only (max 10): use the box around each circle, nearest to the trip first."""
+    boxes = []
+    for polygon in polygons or []:
+        ring = polygon[0]
+        lngs, lats = [p[0] for p in ring], [p[1] for p in ring]
+        center = [sum(lngs) / len(lngs), sum(lats) / len(lats)]
+        boxes.append((distance_to_trip_m(center, origin, destination), {
+            "southWestCorner": {"latitude": min(lats), "longitude": min(lngs)},
+            "northEastCorner": {"latitude": max(lats), "longitude": max(lngs)},
+        }))
+    boxes.sort(key=lambda item: item[0])
+    return [box for _, box in boxes[:TOMTOM_MAX_AREAS]]
+
+
+async def get_tomtom_route(client, origin, destination, profile="driving-car", polygons=None):
+    """Fastest route with live traffic, going around the report areas (as rectangles)."""
+    key = os.getenv("TOMTOM_API_KEY", "").strip()
+    if not key:
+        raise ValueError("Add your TOMTOM_API_KEY to the root .env file.")
+    points = f"{origin[1]},{origin[0]}:{destination[1]},{destination[0]}"
+    rectangles = avoid_rectangles(polygons, origin, destination)
+    url = f"https://api.tomtom.com/routing/1/calculateRoute/{points}/json"
+    params = {"key": key, "travelMode": TOMTOM_MODES[profile], "routeType": "fastest",
+              "traffic": "true" if profile == "driving-car" else "false"}
+    # TomTom rejects a POST with an empty body, so the plain route is a GET.
+    if rectangles:
+        response = await client.post(url, params=params, json={"avoidAreas": {"rectangles": rectangles}})
+    else:
+        response = await client.get(url, params=params)
+    response.raise_for_status()
+    route = response.json()["routes"][0]
+    summary = route["summary"]
+    coordinates = [[p["longitude"], p["latitude"]] for leg in route["legs"] for p in leg["points"]]
+    return {
+        "type": "Feature",
+        "geometry": {"type": "LineString", "coordinates": coordinates},
+        "properties": {
+            "duration_s": summary["travelTimeInSeconds"],
+            "distance_m": summary["lengthInMeters"],
+            # Extra time from today's traffic, already included in duration_s.
+            "traffic_delay_s": summary.get("trafficDelayInSeconds", 0),
+        },
+    }
+
+
+async def get_ors_route(client, origin, destination, profile="driving-car", polygons=None):
+    """Request GeoJSON using [longitude, latitude] coordinates."""
     key = os.getenv("ORS_API_KEY", "").strip()
     if not key or key == "paste_your_actual_key_here":
         raise ValueError("Add your ORS_API_KEY to the root .env file.")

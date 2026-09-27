@@ -27,9 +27,10 @@ export function RouteLayer({ result }: { result: RouteResult }) {
     map.fitBounds(bounds, flowingLayout ? 30 : { top: 220, right: 40, bottom: 280, left: 40 })
   }, [map, maps, core, route, hasDetour])
 
+  // Usual route first so it sits under the green one, like Google's alternate routes.
   const shapes = useMemo(() => [
+    ...(hasDetour ? [{ id: 'normal', rings: [route.normal.geometry.coordinates], color: '#dadce0', muted: true }] : []),
     { id: 'safe', rings: [route.safe.geometry.coordinates], color: '#24764c' },
-    ...(hasDetour ? [{ id: 'normal', rings: [route.normal.geometry.coordinates], color: '#606971', dashed: true }] : []),
   ], [route, hasDetour])
 
   const avoided = new Set(route.safe.hazards_avoided)

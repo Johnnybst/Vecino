@@ -36,17 +36,24 @@ export function DemoMap({ onClose }: { onClose: () => void }) {
     const listeners = circles.map((circle, index) => circle.addListener('click', () => {
       setSelectedReport(demoHazards.features[index])
     }))
+    // Google-style alternate: light gray with a darker outline, under the green route.
+    const normalCasing = new maps.Polyline({
+      map,
+      path: demoRoute.normal.geometry.coordinates.map(toPoint),
+      strokeColor: '#5f6368',
+      strokeOpacity: 0.75,
+      strokeWeight: 9,
+      clickable: false,
+      zIndex: 1,
+    })
     const normal = new maps.Polyline({
       map,
       path: demoRoute.normal.geometry.coordinates.map(toPoint),
-      strokeOpacity: 0,
-      icons: [{
-        icon: { path: 'M 0,-1 0,1', strokeColor: '#606971', strokeOpacity: 1, strokeWeight: 4, scale: 3 },
-        offset: '0',
-        repeat: '18px',
-      }],
+      strokeColor: '#dadce0',
+      strokeOpacity: 0.9,
+      strokeWeight: 5,
       clickable: false,
-      zIndex: 3,
+      zIndex: 1,
     })
     const safe = new maps.Polyline({
       map,
@@ -64,6 +71,7 @@ export function DemoMap({ onClose }: { onClose: () => void }) {
     return () => {
       listeners.forEach((listener) => listener.remove())
       circles.forEach((circle) => circle.setMap(null))
+      normalCasing.setMap(null)
       normal.setMap(null)
       safe.setMap(null)
       if (previousCenter) map.setCenter(previousCenter)

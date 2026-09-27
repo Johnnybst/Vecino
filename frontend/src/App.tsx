@@ -9,6 +9,9 @@ import type { RouteResult } from './routeTypes'
 import { I18nContext, messages, useI18n } from './i18n'
 import type { Language, TextKey } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
+import { ThemeToggle } from './ThemeToggle'
+import { applyTheme, darkMapStyles, initialChoice, resolveTheme, saveChoice } from './theme'
+import type { ThemeChoice } from './theme'
 import { TrafficLayer } from './TrafficLayer'
 import { MapControls } from './MapControls'
 import { FollowMe } from './FollowMe'
@@ -286,6 +289,17 @@ function App() {
   const t = messages[language]
 
   useEffect(() => { document.documentElement.lang = language }, [language])
+  const [themeChoice, setThemeChoice] = useState<ThemeChoice>(initialChoice)
+  const [clock, setClock] = useState(() => new Date())
+  // On Auto, check the clock every minute so it switches at 7 PM / 7 AM on its own.
+  useEffect(() => {
+    if (themeChoice !== 'auto') return
+    const timer = setInterval(() => setClock(new Date()), 60000)
+    return () => clearInterval(timer)
+  }, [themeChoice])
+  const theme = resolveTheme(themeChoice, clock)
+  useEffect(() => { applyTheme(theme) }, [theme])
+  useEffect(() => { saveChoice(themeChoice) }, [themeChoice])
 
   if (!apiKey) {
     return (
@@ -308,9 +322,12 @@ function App() {
           mapTypeControl={false}
           streetViewControl={false}
           fullscreenControl={false}
+          styles={theme === 'dark' ? darkMapStyles : []}
         />{!showDemo && <FollowMe line={route?.data.safe.geometry.coordinates} />}</div>
         <section className="vecino-panel" hidden={showDemo} aria-label={t.chooseTrip}>
-          <div className="panel-title"><h1>Vecino</h1><LanguageSelect /></div>
+          <div className="panel-title"><h1>Vecino</h1>
+            <div className="heading-controls"><ThemeToggle choice={themeChoice} onChange={(choice) => { setClock(new Date()); setThemeChoice(choice) }} /><LanguageSelect /></div>
+          </div>
           <div hidden={route !== null}>
             <AddressPanel onShowDemo={() => setShowDemo(true)} onRoute={(result) => {
               setHistory(false); setMinutes(0); setPreviewAt(undefined); setRoute(result)
