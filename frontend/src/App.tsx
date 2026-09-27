@@ -366,7 +366,8 @@ function App() {
           styles={mapId ? undefined : theme === 'dark' ? darkMapStyles : []}
         />{!showDemo && <FollowMe route={route?.data.safe} onProgress={setProgress}
           onRecalculate={route && trip ? recalculate : undefined}
-          navigating={navigating && !!route} onEnd={() => { setNavigating(false); setProgress(null) }} />}</div>
+          navigating={navigating && !!route} onEnd={() => { setNavigating(false); setProgress(null) }}
+          profile={trip?.profile} onArrive={() => { setNavigating(false); setProgress(null) }} />}</div>
         <section className="vecino-panel" hidden={showDemo} aria-label={t.chooseTrip}>
           <div className="panel-title"><h1>Vecino</h1>
             <div className="heading-controls"><ThemeToggle choice={themeChoice} onChange={(choice) => { setClock(new Date()); setThemeChoice(choice) }} /><LanguageSelect /></div>

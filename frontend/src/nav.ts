@@ -2,7 +2,7 @@
 export type Point = [number, number]
 export type Progress = { index: number; point: Point; offRouteM: number }
 
-function metres(a: Point, b: Point) {
+export function metres(a: Point, b: Point) {
   const x = (b[0] - a[0]) * 111320 * Math.cos(((a[1] + b[1]) / 2) * Math.PI / 180)
   const y = (b[1] - a[1]) * 111320
   return Math.hypot(x, y)
