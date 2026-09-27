@@ -72,6 +72,25 @@ Returns `data/risk/risk_grid.geojson` — squares with `properties.score` from 0
 
 ---
 
+## 4b. Miami-Dade only
+
+Everything stays inside one shared box. Use these exact numbers everywhere:
+
+```
+south 25.13   north 25.98   west -80.88   east -80.11
+```
+
+| Who | File | What to do |
+|---|---|---|
+| Person 1 | `api/hazards.py` | Drop reports whose center is outside the box (real reports only; the fake ones are already inside). |
+| Person 2 | `api/routing.py` / `api/main.py` | If the start or end is outside the box, don't call the route service. Return HTTP 422 with `"detail": "outside_area"`. |
+| Person 3 | `frontend/src/App.tsx`, `i18n.ts` | Address boxes: use `locationRestriction` with the box instead of `locationBias`, so only Miami-Dade places are suggested. When `/route` says `outside_area`, show "Vecino covers Miami-Dade only" in all 3 languages. |
+| Person 4 | `scripts/build_risk_grid.py`, `api/incidents.py` | Risk grid already uses the box. Live incidents: Miami-Dade only. |
+
+**Done when:** typing "Orlando" in From shows no suggestions, and a `/route` request with a start in Fort Lauderdale returns 422.
+
+---
+
 ## 5. Each person's job
 
 ### Person 1 — alerts + server online
