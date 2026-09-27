@@ -18,6 +18,13 @@ function reportDuration(totalMinutes: number, language: Language): string {
 export const languageNames: Record<Language, string> = { en: 'English', es: 'Español', ht: 'Kreyòl' }
 
 const en = {
+  aboutLayer: (label: string) => `About ${label}`,
+  trafficHelp: 'Google traffic shows current congestion on roads. It does not change report severity.',
+  incidentsHelp: 'Show current crashes, stopped vehicles and closures. Updated every 5 minutes.',
+  reportsHelpLabel: 'Reports', reportColorsHelp: 'Activity reports: color shows severity; grayness shows age.',
+  historyLabel: 'Report history', historyTime: 'Look back',
+  historyAgo: (n: number) => n === 0 ? 'Now' : `${reportDuration(n, 'en')} ago`,
+  historyHint: 'Available reports at the selected time. Deleted reports cannot be recovered. Routes and road incidents stay current.',
   incidentLocation: { NOF: 'north of', SOF: 'south of', EOF: 'east of', WOF: 'west of', NB: 'northbound', SB: 'southbound', EB: 'eastbound', WB: 'westbound', ST: 'Street', AVE: 'Avenue', RD: 'Road', BLVD: 'Boulevard', TPKE: 'Turnpike', PKWY: 'Parkway', at: 'at', mileMarker: 'mile marker' },
   incidents: 'Road incidents', incidentsLoading: 'Loading road incidents...', incidentsUnavailable: 'Road incidents are unavailable.',
   incidentsNotice: 'Live incidents. Routes do not avoid these icons.', incidentsEmpty: 'No incidents returned. Roads may still have disruptions.',
@@ -82,6 +89,13 @@ type Messages = typeof en
 export type TextKey = { [K in keyof Messages]: Messages[K] extends string ? K : never }[keyof Messages]
 
 const es: Messages = {
+  aboutLayer: (label) => `Acerca de ${label}`,
+  trafficHelp: 'El tráfico de Google muestra la congestión actual. No cambia el nivel de los reportes.',
+  incidentsHelp: 'Muestra choques, vehículos detenidos y cierres actuales. Se actualiza cada 5 minutos.',
+  reportsHelpLabel: 'Reportes', reportColorsHelp: 'Reportes de actividad: el color indica el nivel; el gris indica la antigüedad.',
+  historyLabel: 'Historial de reportes', historyTime: 'Ver el pasado',
+  historyAgo: (n) => n === 0 ? 'Ahora' : `Hace ${reportDuration(n, 'es')}`,
+  historyHint: 'Reportes disponibles en ese momento. Los eliminados no se pueden recuperar. Las rutas y los incidentes viales siguen siendo actuales.',
   incidentLocation: { NOF: 'al norte de', SOF: 'al sur de', EOF: 'al este de', WOF: 'al oeste de', NB: 'hacia el norte', SB: 'hacia el sur', EB: 'hacia el este', WB: 'hacia el oeste', ST: 'Street', AVE: 'Avenue', RD: 'Road', BLVD: 'Boulevard', TPKE: 'Turnpike', PKWY: 'Parkway', at: 'en', mileMarker: 'marcador de milla' },
   incidents: 'Incidentes viales', incidentsLoading: 'Cargando incidentes viales...', incidentsUnavailable: 'Los incidentes viales no están disponibles.',
   incidentsNotice: 'Incidentes en vivo. Las rutas no evitan estos iconos.', incidentsEmpty: 'No se recibieron incidentes. Aún puede haber interrupciones.',
@@ -143,6 +157,13 @@ const es: Messages = {
 }
 
 const ht: Messages = {
+  aboutLayer: (label) => `Enfòmasyon sou ${label}`,
+  trafficHelp: 'Trafik Google montre anbouteyaj aktyèl sou wout yo. Li pa chanje nivo rapò yo.',
+  incidentsHelp: 'Montre kolizyon, machin kanpe ak wout fèmen kounye a. Li mete ajou chak 5 minit.',
+  reportsHelpLabel: 'Rapò', reportColorsHelp: 'Rapò aktivite: koulè montre nivo a; gri montre laj la.',
+  historyLabel: 'Istwa rapò yo', historyTime: 'Gade nan pase',
+  historyAgo: (n) => n === 0 ? 'Kounye a' : `${reportDuration(n, 'ht')} de sa`,
+  historyHint: 'Rapò ki disponib nan moman sa a. Nou pa ka rekipere rapò efase yo. Wout ak ensidan sou wout yo rete aktyèl.',
   incidentLocation: { NOF: 'nan nò', SOF: 'nan sid', EOF: 'nan lès', WOF: 'nan lwès', NB: 'nan direksyon nò', SB: 'nan direksyon sid', EB: 'nan direksyon lès', WB: 'nan direksyon lwès', ST: 'Street', AVE: 'Avenue', RD: 'Road', BLVD: 'Boulevard', TPKE: 'Turnpike', PKWY: 'Parkway', at: 'nan', mileMarker: 'makè mil' },
   incidents: 'Ensidan sou wout', incidentsLoading: 'N ap chaje ensidan yo...', incidentsUnavailable: 'Ensidan sou wout yo pa disponib.',
   incidentsNotice: 'Ensidan aktyèl. Wout yo pa evite ikon sa yo.', incidentsEmpty: 'Pa gen ensidan ki retounen. Ka toujou gen pwoblèm sou wout la.',

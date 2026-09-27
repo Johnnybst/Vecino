@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
 import { APIProvider, Map, useMapsLibrary } from '@vis.gl/react-google-maps'
 import './App.css'
 import { DemoMap } from './DemoMap'
-import { HazardsLayer } from './HazardsLayer'
 import type { Hazard } from './HazardsLayer'
 import { RouteLayer } from './RouteLayer'
 import { isRouteResponse } from './routeTypes'
@@ -11,12 +9,9 @@ import type { RouteResult } from './routeTypes'
 import { I18nContext, messages, useI18n } from './i18n'
 import type { Language, TextKey } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
-import { IncidentsLayer } from './IncidentsLayer'
 import { TrafficLayer } from './TrafficLayer'
-import { SeverityLegend } from './SeverityLegend'
-import { TimeSlider } from './TimeSlider'
+import { MapControls } from './MapControls'
 
-import { demoMode } from './config'
 
 const ignorePreviewReports = () => {}
 const coverage = { south: 25.13, north: 25.98, west: -80.88, east: -80.11 }
@@ -210,8 +205,7 @@ function AddressPanel({ onShowDemo, onRoute, hazards }: {
   }
 
   return (
-    <section className="address-panel" aria-label={t.chooseTrip}>
-      <div className="panel-title"><h1>Vecino</h1><LanguageSelect /></div>
+    <div className="address-form" aria-label={t.chooseTrip}>
       <p className="panel-subtitle">{t.whereGoing}</p>
       <div inert={loadingRoute}>
       {originMode === 'address' ? (
@@ -268,29 +262,23 @@ function AddressPanel({ onShowDemo, onRoute, hazards }: {
       <button type="button" className="location-button sample-link" onClick={onShowDemo} disabled={loadingRoute}>
         {t.showSample}
       </button>
-    </section>
+    </div>
   )
 }
 
 function App() {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY
   const [showDemo, setShowDemo] = useState(false)
-  const dock = useRef<HTMLDivElement>(null)
-  const [dockHeight, setDockHeight] = useState(250)
-  useEffect(() => {
-    if (!dock.current) return
-    const observer = new ResizeObserver(([entry]) => setDockHeight(Math.ceil(entry.borderBoxSize[0].blockSize)))
-    observer.observe(dock.current)
-    return () => observer.disconnect()
-  }, [showDemo])
   const [traffic, setTraffic] = useState(false)
   const [incidents, setIncidents] = useState(false)
+  const [history, setHistory] = useState(false)
+  const [historyNow, setHistoryNow] = useState(() => Date.now())
   const [minutes, setMinutes] = useState(0)
   const [previewAt, setPreviewAt] = useState<string | undefined>()
   useEffect(() => {
-    const timer = setTimeout(() => setPreviewAt(minutes ? new Date(Date.now() + minutes * 60000).toISOString() : undefined), 250)
+    const timer = setTimeout(() => setPreviewAt(history && minutes ? new Date(historyNow - minutes * 60000).toISOString() : undefined), 250)
     return () => clearTimeout(timer)
-  }, [minutes])
+  }, [minutes, history, historyNow])
   const [hazards, setHazards] = useState<Hazard[]>([])
   const [route, setRoute] = useState<RouteResult | null>(null)
   const [language, setLanguage] = useState<Language>('en')
@@ -309,9 +297,9 @@ function App() {
 
   return (
     <I18nContext.Provider value={{ language, setLanguage }}>
-    <main className={`map-screen${!showDemo ? ' main-map' : ''}${route ? ' has-route' : ''}`} style={{ '--dock-height': `${dockHeight}px` } as CSSProperties} aria-label={t.mapLabel}>
+    <main className={`map-screen${!showDemo ? ' main-map' : ''}${route ? ' has-route' : ''}`} aria-label={t.mapLabel}>
       <APIProvider apiKey={apiKey}>
-        <Map
+        <div className="map-canvas"><Map
           style={{ width: '100%', height: '100%' }}
           defaultCenter={{ lat: 25.7617, lng: -80.1918 }}
           defaultZoom={12}
@@ -319,24 +307,29 @@ function App() {
           mapTypeControl={false}
           streetViewControl={false}
           fullscreenControl={false}
-        />
-        <div hidden={showDemo || route !== null}>
-          <AddressPanel onShowDemo={() => setShowDemo(true)} onRoute={(result) => { setMinutes(0); setPreviewAt(undefined); setRoute(result) }} hazards={hazards} />
-        </div>
+        /></div>
+        <section className="vecino-panel" hidden={showDemo} aria-label={t.chooseTrip}>
+          <div className="panel-title"><h1>Vecino</h1><LanguageSelect /></div>
+          <div hidden={route !== null}>
+            <AddressPanel onShowDemo={() => setShowDemo(true)} onRoute={(result) => {
+              setHistory(false); setMinutes(0); setPreviewAt(undefined); setRoute(result)
+            }} hazards={hazards} />
+          </div>
+          {route && <div className="trip-heading"><strong>{t.yourRoutes}</strong>
+            <button type="button" className="location-button" onClick={() => {
+              setRoute(null); setHistory(false); setMinutes(0); setPreviewAt(undefined)
+            }}>{t.editTrip}</button></div>}
+          {!showDemo && <MapControls traffic={traffic} onTraffic={setTraffic} incidents={incidents} onIncidents={setIncidents}
+            history={history} onHistory={(enabled) => {
+              setHistory(enabled); setHistoryNow(Date.now()); setMinutes(0); setPreviewAt(undefined)
+            }} minutes={minutes} onMinutes={(value) => {
+              setMinutes(value)
+              if (value === 0) { setHistoryNow(Date.now()); setPreviewAt(undefined) }
+            }} at={previewAt} onHazardsChange={previewAt ? ignorePreviewReports : setHazards} />}
+        </section>
         {showDemo && <DemoMap onClose={() => setShowDemo(false)} />}
         <TrafficLayer enabled={traffic && !showDemo} />
-        {!showDemo && <div className="bottom-stack" ref={dock}>
-          <div className="map-tools">
-            <label><input type="checkbox" checked={traffic} onChange={(event) => setTraffic(event.target.checked)} />{t.traffic}</label>
-            <label><input type="checkbox" checked={incidents} onChange={(event) => setIncidents(event.target.checked)} />{t.incidents}</label>
-            <SeverityLegend />
-            <HazardsLayer key={previewAt ?? 'now'} at={previewAt}
-              onHazardsChange={previewAt ? ignorePreviewReports : setHazards} hideStatus={route !== null} />
-            {incidents && <IncidentsLayer />}
-          </div>
-          {demoMode && <TimeSlider minutes={minutes} onChange={setMinutes} />}
-          {route && <RouteLayer result={route} onEdit={() => { setRoute(null); setMinutes(0); setPreviewAt(undefined) }} />}
-        </div>}
+        {route && !showDemo && <RouteLayer result={route} />}
       </APIProvider>
     </main>
     </I18nContext.Provider>

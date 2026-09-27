@@ -2,12 +2,11 @@ import { useEffect, useMemo } from 'react'
 import { useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
 import type { RouteResult } from './routeTypes'
 import { useI18n } from './i18n'
-import { LanguageSelect } from './LanguageSelect'
 import { TripMarkers } from './TripMarkers'
 import { MapGeometry } from './MapGeometry'
 import { demoMode } from './config'
 
-export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: () => void }) {
+export function RouteLayer({ result }: { result: RouteResult }) {
   const { t, language } = useI18n()
   const map = useMap()
   const maps = useMapsLibrary('maps')
@@ -23,7 +22,9 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
     for (const line of [route.safe, route.normal]) {
       line.geometry.coordinates.forEach((point) => bounds.extend(toPoint(point)))
     }
-    map.fitBounds(bounds, { top: 135, right: 40, bottom: Math.min(460, map.getDiv().clientHeight * 0.58), left: 40 })
+    const panel = document.querySelector('.vecino-panel')
+    const flowingLayout = panel && getComputedStyle(panel).position !== 'absolute'
+    map.fitBounds(bounds, flowingLayout ? 30 : { top: 220, right: 40, bottom: 280, left: 40 })
   }, [map, maps, core, route, hasDetour])
 
   const shapes = useMemo(() => [
@@ -42,12 +43,6 @@ export function RouteLayer({ result, onEdit }: { result: RouteResult; onEdit: ()
     <>
       <MapGeometry shapes={shapes} />
       <TripMarkers coordinates={route.safe.geometry.coordinates} />
-      <div className="demo-heading">
-        <strong>Vecino · {t.yourRoutes}</strong>
-        <div className="heading-controls"><LanguageSelect />
-          <button type="button" className="location-button" onClick={onEdit}>{t.editTrip}</button>
-        </div>
-      </div>
       <section className="demo-card route-card" aria-label={t.routeComparison}>
         {route.left_out.length > 0 && (
           <div className="route-warning" role="alert">
