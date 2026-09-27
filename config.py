@@ -74,7 +74,7 @@ class Config:
     correlation_check_interval: int = 60
 
     # Cluster expiry - stops sending update notifications after this many hours
-    cluster_expiry_hours: float = 6.0
+    cluster_expiry_hours: float = 24.0  # Critical stays until the 4 AM wipe
 
     # Database
     db_path: str = "ice_monitor.db"
@@ -143,7 +143,7 @@ def load_config() -> Config:
         similarity_threshold=_get_float("SIMILARITY_THRESHOLD", 0.35),
         geo_proximity_km=_get_float("GEO_PROXIMITY_KM", 3.0),
         correlation_check_interval=_get_int("CORRELATION_CHECK_INTERVAL", 60),
-        cluster_expiry_hours=_get_float("CLUSTER_EXPIRY_HOURS", 6.0),
+        cluster_expiry_hours=_get_float("CLUSTER_EXPIRY_HOURS", 24.0),
         db_path=os.getenv("DB_PATH", "ice_monitor.db"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         dry_run=_get_bool("DRY_RUN"),

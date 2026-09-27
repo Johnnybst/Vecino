@@ -143,10 +143,10 @@ class ICEMonitor:
         is_trusted_source = report.source_type in ("iceout", "stopice")
 
         # Freshness filter — discard stale reports
-        # Trusted sources get 6 hours (they're already vetted)
+        # Trusted sources (like IceOut) get 24 hours: Critical stays until the 4 AM wipe
         # Other sources get 3 hours
         if is_trusted_source:
-            max_age = timedelta(hours=6)
+            max_age = timedelta(hours=24)
         else:
             max_age = timedelta(seconds=self.config.report_max_age_seconds)
 

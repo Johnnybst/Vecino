@@ -230,7 +230,9 @@ class IceoutCollector(BaseCollector):
         self._intercepted_data.clear()
 
         now = datetime.now(timezone.utc)
-        since = now - timedelta(hours=3)
+        # Look back a full day so a restart (e.g. a redeploy) backfills reports; the map's own
+        # rules decide how long each level shows (Observed 3 h, Moderate 6 h, Critical until 4 AM).
+        since = now - timedelta(hours=24)
         since_str = since.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
         # Force full re-authentication every 5 polls to avoid stale sessions
@@ -504,9 +506,9 @@ class IceoutCollector(BaseCollector):
             else:
                 incident_time = now
 
-            # Enforce 6-hour freshness (trusted source gets longer window)
+            # Enforce 24-hour freshness (trusted source; Critical stays until the 4 AM wipe)
             age = now - incident_time
-            if age > timedelta(hours=6):
+            if age > timedelta(hours=24):
                 continue
 
             if created_at_str:
