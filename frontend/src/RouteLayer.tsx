@@ -8,10 +8,13 @@ import { demoMode } from './config'
 import { lineAhead } from './nav'
 import type { Progress } from './nav'
 
-export function RouteLayer({ result, progress }: {
+export function RouteLayer({ result, progress, navigating = false, onStart }: {
   result: RouteResult
   // While following: where you are on the green route, so the part behind you is erased.
   progress?: Progress | null
+  // During a trip the card tucks away; the overview comes back when the trip ends.
+  navigating?: boolean
+  onStart?: () => void
 }) {
   const { t, language } = useI18n()
   const map = useMap()
@@ -22,7 +25,7 @@ export function RouteLayer({ result, progress }: {
   const hasDetour = route.has_detour ?? (JSON.stringify(route.safe.geometry.coordinates) !== JSON.stringify(route.normal.geometry.coordinates))
 
   useEffect(() => {
-    if (!map || !maps || !core) return
+    if (!map || !maps || !core || navigating) return
     const toPoint = ([lng, lat]: [number, number]) => ({ lat, lng })
     const bounds = new core.LatLngBounds()
     for (const line of [route.safe, route.normal]) {
@@ -31,7 +34,7 @@ export function RouteLayer({ result, progress }: {
     const panel = document.querySelector('.vecino-panel')
     const flowingLayout = panel && getComputedStyle(panel).position !== 'absolute'
     map.fitBounds(bounds, flowingLayout ? 30 : { top: 220, right: 40, bottom: 280, left: 40 })
-  }, [map, maps, core, route, hasDetour])
+  }, [map, maps, core, route, hasDetour, navigating])
 
   // Usual route first so it sits under the green one, like Google's alternate routes.
   const safeLine = route.safe.geometry.coordinates
@@ -52,7 +55,7 @@ export function RouteLayer({ result, progress }: {
     <>
       <MapGeometry shapes={shapes} />
       <TripMarkers coordinates={route.safe.geometry.coordinates} />
-      <section className="demo-card route-card" aria-label={t.routeComparison}>
+      <section className="demo-card route-card" aria-label={t.routeComparison} hidden={navigating}>
         {route.left_out.length > 0 && (
           <div className="route-warning" role="alert">
             <strong>{warningTitle}</strong>
@@ -76,6 +79,8 @@ export function RouteLayer({ result, progress }: {
           {hasDetour && <li><span className="legend-normal" />{t.usualRoute}</li>}
           <li><span className="legend-report" />{t.reportedArea}</li>
         </ul>
+        {onStart && <button type="button" className="sample-button start-trip" onClick={onStart}>
+          <span aria-hidden="true">➤</span> {t.startTrip}</button>}
       </section>
     </>
   )

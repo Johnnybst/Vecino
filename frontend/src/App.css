@@ -539,3 +539,8 @@
 :root[data-theme='dark'] .nav-card { background: #1c2420; color: #e3ece6; box-shadow: 0 2px 8px #0009; }
 :root[data-theme='dark'] .nav-eta { color: #a9b9af; }
 .route-shape.no-draw { animation: none; }
+.route-card[hidden] { display: none; }
+.start-trip { font-size: 16px; font-weight: 600; }
+/* During a trip: map fills the screen, the trip panel tucks away. */
+.navigating .vecino-panel { display: none; }
+.navigating.main-map.map-screen .map-canvas, .navigating .map-canvas { height: 100dvh; }

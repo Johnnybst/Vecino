@@ -39,3 +39,16 @@ export function metresAhead(line: Point[], progress: Progress, toIndex = line.le
 export function lineAhead(line: Point[], progress: Progress): Point[] {
   return [progress.point, ...line.slice(progress.index + 1)]
 }
+
+// Compass direction (0 = north, 90 = east) the route heads from where you are, looking ~40 m ahead.
+export function headingAhead(line: Point[], progress: Progress, lookM = 40): number {
+  let from = progress.point, to = line[Math.min(progress.index + 1, line.length - 1)]
+  let travelled = metres(from, to)
+  for (let i = progress.index + 1; travelled < lookM && i < line.length - 1; i += 1) {
+    travelled += metres(line[i], line[i + 1])
+    to = line[i + 1]
+  }
+  if (to === from) from = line[Math.max(0, progress.index)]
+  const dx = (to[0] - from[0]) * Math.cos(from[1] * Math.PI / 180), dy = to[1] - from[1]
+  return (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360
+}
