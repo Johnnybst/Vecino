@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from api.hazards import get_hazards
-from api.incidents import get_incidents
+from api.incidents import get_incidents, inside_miami_dade
 from api.routing import ROOT, build_routes, load_demo_hazards
 
 load_dotenv(ROOT / ".env")
@@ -67,6 +67,9 @@ async def invalid_request(request, exc):
 
 @app.post("/route", summary="Get two routes using the shared reports")
 async def route(trip: RouteRequest):
+    # Miami-Dade only (NEWAGENTS.md 4b). The map shows "Vecino covers Miami-Dade only."
+    if not all(inside_miami_dade(p.lat, p.lng) for p in (trip.origin, trip.destination)):
+        raise HTTPException(422, "outside_area")
     try:
         hazards = load_demo_hazards()
         return await build_routes(

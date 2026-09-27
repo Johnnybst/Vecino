@@ -24,7 +24,8 @@ DEMO_ORIGIN = [-80.230, 25.7653]
 DEMO_DESTINATION = [-80.209, 25.7653]
 DEMO_PROFILE = "driving-car"
 BACKUP_FILE = ROOT / "data" / "demo_route.json"
-EXPLANATION_TIMEOUT_S = 4
+# Matches explain(): Gemini's first call after a restart can take ~5 s.
+EXPLANATION_TIMEOUT_S = 6
 
 
 async def get_route(client, origin, destination, profile="driving-car", polygons=None):
