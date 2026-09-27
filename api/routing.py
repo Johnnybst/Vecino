@@ -28,13 +28,18 @@ BACKUP_FILE = ROOT / "data" / "demo_route.json"
 EXPLANATION_TIMEOUT_S = 6
 
 
-async def get_route(client, origin, destination, profile="driving-car", polygons=None):
+async def get_route(client, origin, destination, profile="driving-car", polygons=None, language="en"):
     """Pick the directions service. ROUTING_PROVIDER=tomtom adds live traffic; default is ORS."""
     if profile not in PROFILES:
         raise ValueError("Choose driving-car, foot-walking, or cycling-regular.")
     if os.getenv("ROUTING_PROVIDER", "ors").strip().lower() == "tomtom":
-        return await get_tomtom_route(client, origin, destination, profile, polygons)
-    return await get_ors_route(client, origin, destination, profile, polygons)
+        return await get_tomtom_route(client, origin, destination, profile, polygons, language)
+    return await get_ors_route(client, origin, destination, profile, polygons, language)
+
+
+# Turn-by-turn text: neither service has Haitian Creole, so Kreyol users get English turns.
+ORS_LANGUAGES = {"en": "en", "es": "es", "ht": "en"}
+TOMTOM_LANGUAGES = {"en": "en-US", "es": "es-ES", "ht": "en-US"}
 
 
 # TomTom travel modes; live traffic only matters for driving.
@@ -62,7 +67,7 @@ def avoid_rectangles(polygons, origin, destination):
     return [box for _, box in boxes[:TOMTOM_MAX_AREAS]]
 
 
-async def get_tomtom_route(client, origin, destination, profile="driving-car", polygons=None):
+async def get_tomtom_route(client, origin, destination, profile="driving-car", polygons=None, language="en"):
     """Fastest route with live traffic, going around the report areas (as rectangles)."""
     key = os.getenv("TOMTOM_API_KEY", "").strip()
     if not key:
@@ -71,7 +76,8 @@ async def get_tomtom_route(client, origin, destination, profile="driving-car", p
     rectangles = avoid_rectangles(polygons, origin, destination)
     url = f"https://api.tomtom.com/routing/1/calculateRoute/{points}/json"
     params = {"key": key, "travelMode": TOMTOM_MODES[profile], "routeType": "fastest",
-              "traffic": "true" if profile == "driving-car" else "false"}
+              "traffic": "true" if profile == "driving-car" else "false",
+              "instructionsType": "text", "language": TOMTOM_LANGUAGES.get(language, "en-US")}
     # TomTom rejects a POST with an empty body, so the plain route is a GET.
     if rectangles:
         response = await client.post(url, params=params, json={"avoidAreas": {"rectangles": rectangles}})
@@ -89,16 +95,20 @@ async def get_tomtom_route(client, origin, destination, profile="driving-car", p
             "distance_m": summary["lengthInMeters"],
             # Extra time from today's traffic, already included in duration_s.
             "traffic_delay_s": summary.get("trafficDelayInSeconds", 0),
+            # Turns: "at" is the index of the point on the line where the turn happens.
+            "steps": [{"instruction": i["message"], "at": i["pointIndex"]}
+                      for i in route.get("guidance", {}).get("instructions", [])
+                      if i.get("message") and isinstance(i.get("pointIndex"), int)],
         },
     }
 
 
-async def get_ors_route(client, origin, destination, profile="driving-car", polygons=None):
+async def get_ors_route(client, origin, destination, profile="driving-car", polygons=None, language="en"):
     """Request GeoJSON using [longitude, latitude] coordinates."""
     key = os.getenv("ORS_API_KEY", "").strip()
     if not key or key == "paste_your_actual_key_here":
         raise ValueError("Add your ORS_API_KEY to the root .env file.")
-    body = {"coordinates": [origin, destination]}
+    body = {"coordinates": [origin, destination], "language": ORS_LANGUAGES.get(language, "en")}
     if polygons:
         body["options"] = {
             "avoid_polygons": {"type": "MultiPolygon", "coordinates": polygons}
@@ -118,6 +128,10 @@ async def get_ors_route(client, origin, destination, profile="driving-car", poly
         "properties": {
             "duration_s": summary["duration"],
             "distance_m": summary["distance"],
+            # Turns: "at" is the index of the point on the line where the turn happens.
+            "steps": [{"instruction": step["instruction"], "at": step["way_points"][0]}
+                      for segment in feature["properties"].get("segments", [])
+                      for step in segment.get("steps", []) if step.get("instruction")],
         },
     }
 
@@ -206,10 +220,10 @@ def sighting_explanation(count):
     }
 
 
-async def build_routes(origin, destination, profile, hazards):
+async def build_routes(origin, destination, profile, hazards, language="en"):
     """Use a saved fixed demo only on a service outage, never for other trips."""
     try:
-        return await _build_routes(origin, destination, profile, hazards)
+        return await _build_routes(origin, destination, profile, hazards, language=language)
     except (httpx.RequestError, httpx.HTTPStatusError) as exc:
         if isinstance(exc, httpx.HTTPStatusError):
             if exc.response.status_code != 429 and exc.response.status_code < 500:
@@ -229,7 +243,7 @@ async def build_routes(origin, destination, profile, hazards):
         return result
 
 
-async def _build_routes(origin, destination, profile, hazards, saved=None):
+async def _build_routes(origin, destination, profile, hazards, saved=None, language="en"):
     """Build the team's response with a 300 m extra gap and no trip storage."""
     active, sightings = [], []
     for h in hazards:
@@ -263,7 +277,7 @@ async def _build_routes(origin, destination, profile, hazards, saved=None):
     async with httpx.AsyncClient(timeout=30) as client:
         async def request_route(polygons=None):
             if saved is None:
-                return await get_route(client, origin, destination, profile, polygons)
+                return await get_route(client, origin, destination, profile, polygons, language=language)
             route = saved["safe" if polygons else "normal"]
             if (route["geometry"]["type"] != "LineString"
                     or len(route["geometry"]["coordinates"]) < 2):

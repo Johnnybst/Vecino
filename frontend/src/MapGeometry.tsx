@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useMap, useMapsLibrary } from '@vis.gl/react-google-maps'
+import { mapId } from './config'
 
 export type MapShape = {
   id: string
@@ -8,6 +9,8 @@ export type MapShape = {
   fillOpacity?: number
   // Google-style alternate route: wide, soft and see-through, drawn under the main one.
   muted?: boolean
+  // Redrawn often (the route shrinking as you move): skip the draw-in animation.
+  still?: boolean
 }
 
 // SVG follows Google's projection on pan/zoom; only CSS performs animations.
@@ -17,6 +20,30 @@ export function MapGeometry({ shapes, polygons = false }: { shapes: MapShape[]; 
   const core = useMapsLibrary('core')
   useEffect(() => {
     if (!map || !maps || !core) return
+    // Vector map (Map ID): the map can turn and tilt, which a flat SVG overlay cannot follow,
+    // so draw with Google's own shapes instead (no CSS animations in this mode).
+    if (mapId) {
+      const dark = document.documentElement.dataset.theme === 'dark'
+      const toPath = (ring: [number, number][]) => ring.map(([lng, lat]) => ({ lat, lng }))
+      const drawn: { setMap: (map: null) => void }[] = []
+      shapes.forEach((shape, index) => {
+        if (polygons) {
+          drawn.push(new maps.Polygon({ map, paths: shape.rings.map(toPath), clickable: false, zIndex: 1,
+            fillColor: shape.color, fillOpacity: shape.fillOpacity ?? 0,
+            strokeColor: shape.color, strokeWeight: 2, strokeOpacity: 1 }))
+          return
+        }
+        const path = toPath(shape.rings[0])
+        if (shape.muted) {
+          drawn.push(new maps.Polyline({ map, path, clickable: false, zIndex: 2 + index * 2,
+            strokeColor: '#5f6368', strokeOpacity: 0.75, strokeWeight: 9 }))
+        }
+        drawn.push(new maps.Polyline({ map, path, clickable: false, zIndex: 3 + index * 2,
+          strokeColor: !shape.muted && dark ? '#3cc07e' : shape.color,
+          strokeOpacity: shape.muted ? 0.9 : 1, strokeWeight: shape.muted ? 5 : 6 }))
+      })
+      return () => drawn.forEach((item) => item.setMap(null))
+    }
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
     svg.setAttribute('class', 'map-geometry')
     svg.setAttribute('aria-hidden', 'true')
@@ -44,7 +71,8 @@ export function MapGeometry({ shapes, polygons = false }: { shapes: MapShape[]; 
       path.setAttribute('fill-rule', 'evenodd')
       path.setAttribute('stroke-linejoin', 'round')
       path.setAttribute('stroke-linecap', 'round')
-      path.setAttribute('class', polygons ? 'report-shape' : shape.muted ? 'usual-shape' : 'route-shape')
+      path.setAttribute('class', polygons ? 'report-shape' : shape.muted ? 'usual-shape'
+        : shape.still ? 'route-shape no-draw' : 'route-shape')
       if (!polygons && !shape.muted) path.setAttribute('pathLength', '1')
       svg.appendChild(path)
       return { path, casing }

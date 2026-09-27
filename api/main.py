@@ -43,6 +43,8 @@ class RouteRequest(BaseModel):
     origin: Point
     destination: Point
     profile: Literal["driving-car", "foot-walking", "cycling-regular"] = "driving-car"
+    # Language for turn-by-turn instructions only (ht falls back to English).
+    language: Literal["en", "es", "ht"] = "en"
     model_config = ConfigDict(json_schema_extra={"example": {
         "origin": {"lat": 25.757, "lng": -80.374},
         "destination": {"lat": 25.766, "lng": -80.219},
@@ -75,7 +77,7 @@ async def route(trip: RouteRequest):
         return await build_routes(
             [trip.origin.lng, trip.origin.lat],
             [trip.destination.lng, trip.destination.lat],
-            trip.profile, hazards,
+            trip.profile, hazards, language=trip.language,
         )
     except httpx.TimeoutException:
         raise HTTPException(504, "Directions took too long. Please retry.") from None

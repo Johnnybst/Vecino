@@ -16,6 +16,9 @@ import { TrafficLayer } from './TrafficLayer'
 import { MapControls } from './MapControls'
 import { FollowMe } from './FollowMe'
 import { RouteLoading } from './RouteLoading'
+import { askCompassPermission } from './compass'
+import { mapId } from './config'
+import type { Progress } from './nav'
 
 
 const ignorePreviewReports = () => {}
@@ -116,13 +119,14 @@ type Trip = { destination: Coordinates; profile: Profile }
 // One /route request, shared by the address panel and "New route from here".
 // Returns the routes, or the message key to show.
 async function requestRoute(origin: Coordinates, destination: Coordinates, profile: Profile,
-  signal: AbortSignal): Promise<RouteResponse | TextKey> {
+  language: Language, signal: AbortSignal): Promise<RouteResponse | TextKey> {
   const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
   try {
     const response = await fetch(`${baseUrl}/route`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ origin, destination, profile }),
+      // language: only for the turn-by-turn text.
+      body: JSON.stringify({ origin, destination, profile, language }),
       cache: 'no-store',
       credentials: 'omit',
       signal,
@@ -145,7 +149,7 @@ function AddressPanel({ onShowDemo, onRoute, hazards }: {
   onRoute: (result: RouteResult, trip: Trip) => void
   hazards: Hazard[]
 }) {
-  const { t } = useI18n()
+  const { t, language } = useI18n()
   const [origin, setOrigin] = useState<Coordinates | null>(null)
   const [destination, setDestination] = useState<Coordinates | null>(null)
   const [profile, setProfile] = useState<Profile>('driving-car')
@@ -173,7 +177,7 @@ function AddressPanel({ onShowDemo, onRoute, hazards }: {
     setRouteError('')
     const timeout = setTimeout(() => controller.abort(), 70000)
     try {
-      const result = await requestRoute(origin, destination, profile, controller.signal)
+      const result = await requestRoute(origin, destination, profile, language, controller.signal)
       if (typeof result === 'string') setRouteError(result)
       else onRoute({ data: result, hazards }, { destination, profile })
     } finally {
@@ -298,6 +302,9 @@ function App() {
   const [hazards, setHazards] = useState<Hazard[]>([])
   const [route, setRoute] = useState<RouteResult | null>(null)
   const [trip, setTrip] = useState<Trip | null>(null)
+  const [progress, setProgress] = useState<Progress | null>(null)
+  // A started trip: close-up view that follows you (the overview comes back on End trip).
+  const [navigating, setNavigating] = useState(false)
 
   // "New route from here": same destination and travel mode, starting at the blue dot.
   async function recalculate(from: Coordinates): Promise<TextKey | ''> {
@@ -306,8 +313,9 @@ function App() {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 70000)
     try {
-      const result = await requestRoute(from, trip.destination, trip.profile, controller.signal)
+      const result = await requestRoute(from, trip.destination, trip.profile, language, controller.signal)
       if (typeof result === 'string') return result
+      setProgress(null)
       setRoute({ data: result, hazards })
       return ''
     } finally {
@@ -341,31 +349,36 @@ function App() {
 
   return (
     <I18nContext.Provider value={{ language, setLanguage }}>
-    <main className={`map-screen${!showDemo ? ' main-map' : ''}${route ? ' has-route' : ''}`} aria-label={t.mapLabel}>
+    <main className={`map-screen${!showDemo ? ' main-map' : ''}${route ? ' has-route' : ''}${navigating ? ' navigating' : ''}`} aria-label={t.mapLabel}>
       <APIProvider apiKey={apiKey}>
-        <div className="map-canvas"><Map
+        {/* With a Map ID (vector map) Google's own dark scheme replaces the JSON colors; it is only
+            read when the map is created, so the map is rebuilt when the theme changes. */}
+        <div className="map-canvas"><Map key={mapId ? theme : 'map'}
           style={{ width: '100%', height: '100%' }}
+          mapId={mapId}
+          colorScheme={mapId ? (theme === 'dark' ? 'DARK' : 'LIGHT') : undefined}
           defaultCenter={{ lat: 25.7617, lng: -80.1918 }}
           defaultZoom={12}
           gestureHandling="greedy"
           mapTypeControl={false}
           streetViewControl={false}
           fullscreenControl={false}
-          styles={theme === 'dark' ? darkMapStyles : []}
-        />{!showDemo && <FollowMe line={route?.data.safe.geometry.coordinates}
-          onRecalculate={route && trip ? recalculate : undefined} />}</div>
+          styles={mapId ? undefined : theme === 'dark' ? darkMapStyles : []}
+        />{!showDemo && <FollowMe route={route?.data.safe} onProgress={setProgress}
+          onRecalculate={route && trip ? recalculate : undefined}
+          navigating={navigating && !!route} onEnd={() => { setNavigating(false); setProgress(null) }} />}</div>
         <section className="vecino-panel" hidden={showDemo} aria-label={t.chooseTrip}>
           <div className="panel-title"><h1>Vecino</h1>
             <div className="heading-controls"><ThemeToggle choice={themeChoice} onChange={(choice) => { setClock(new Date()); setThemeChoice(choice) }} /><LanguageSelect /></div>
           </div>
           <div hidden={route !== null}>
             <AddressPanel onShowDemo={() => setShowDemo(true)} onRoute={(result, nextTrip) => {
-              setHistory(false); setMinutes(0); setPreviewAt(undefined); setRoute(result); setTrip(nextTrip)
+              setHistory(false); setMinutes(0); setPreviewAt(undefined); setRoute(result); setTrip(nextTrip); setProgress(null); setNavigating(false)
             }} hazards={hazards} />
           </div>
           {route && <div className="trip-heading"><strong>{t.yourRoutes}</strong>
             <button type="button" className="location-button" onClick={() => {
-              setRoute(null); setTrip(null); setHistory(false); setMinutes(0); setPreviewAt(undefined)
+              setRoute(null); setTrip(null); setProgress(null); setNavigating(false); setHistory(false); setMinutes(0); setPreviewAt(undefined)
             }}>{t.editTrip}</button></div>}
           {!showDemo && <MapControls traffic={traffic} onTraffic={setTraffic} incidents={incidents} onIncidents={setIncidents}
             history={history} onHistory={(enabled) => {
@@ -377,7 +390,8 @@ function App() {
         </section>
         {showDemo && <DemoMap onClose={() => setShowDemo(false)} />}
         <TrafficLayer enabled={traffic && !showDemo} />
-        {route && !showDemo && <RouteLayer result={route} />}
+        {route && !showDemo && <RouteLayer result={route} progress={progress} navigating={navigating}
+          onStart={() => { void askCompassPermission(); setNavigating(true) }} />}
       </APIProvider>
     </main>
     </I18nContext.Provider>
