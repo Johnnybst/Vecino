@@ -157,7 +157,7 @@ class RouteApiTests(unittest.TestCase):
     def test_retry_selects_by_weight_and_preserves_endpoint_exclusions(self):
         base = load_demo_hazards()[0]
         hazards = [{**base, "id": f"hz_{i}", "longitude": base["longitude"] + i * 0.00001,
-                    "weight": 0.15 + i * 0.05} for i in range(12)]
+                    "weight": 0.15 + i * 0.05, "radius_m": 150 + i * 10} for i in range(12)]
         hazards.append({**base, "id": "endpoint", "weight": 1,
                         "longitude": TRIP["origin"]["lng"], "latitude": TRIP["origin"]["lat"]})
         error = httpx.HTTPStatusError("refused", request=httpx.Request("POST", "https://example.test"),
@@ -168,8 +168,8 @@ class RouteApiTests(unittest.TestCase):
         ) as get:
             response = self.client.post("/route", json=TRIP)
         self.assertEqual(response.status_code, 200)
-        radius = (REPORT_RADIUS_M + EXTRA_GAP_M) / math.cos(math.pi / 24)
-        expected = [[circle_ring([h["longitude"], h["latitude"]], radius)]
+        expected = [[circle_ring([h["longitude"], h["latitude"]],
+                                (h["radius_m"] + EXTRA_GAP_M) / math.cos(math.pi / 24))]
                     for h in sorted(hazards[:-1], key=lambda h: h["weight"], reverse=True)[:10]]
         self.assertEqual(get.await_args_list[2].args[4], expected)
         self.assertEqual(response.json()["left_out"], ["endpoint"])

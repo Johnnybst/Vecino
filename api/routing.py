@@ -153,15 +153,24 @@ async def build_routes(origin, destination, profile, hazards):
 
 async def _build_routes(origin, destination, profile, hazards, saved=None):
     """Build the team's response with a 300 m extra gap and no trip storage."""
-    radius = REPORT_RADIUS_M + EXTRA_GAP_M
-    # Match the circumscribed avoidance polygon when excluding endpoints.
-    outer_radius = radius / math.cos(math.pi / 24)
-    active = [h for h in hazards if h["weight"] >= 0.1]
+    active = []
+    for h in hazards:
+        if h["weight"] < 0.1:
+            continue
+        # Older saved/demo reports omit this field and retain their 150 m size.
+        radius = float(h.get("radius_m", REPORT_RADIUS_M))
+        if not math.isfinite(radius) or radius <= 0:
+            raise ValueError("Report radius must be a positive finite distance.")
+        active.append({**h, "radius_m": radius})
     left_out, usable = [], []
     endpoint_reports = {"origin": [], "destination": []}
     for hazard in active:
         center = [hazard["longitude"], hazard["latitude"]]
-        hazard = {**hazard, "center": center}
+        avoidance_radius = hazard["radius_m"] + EXTRA_GAP_M
+        # Enclose the full gap even between the polygon's vertices.
+        outer_radius = avoidance_radius / math.cos(math.pi / 24)
+        hazard = {**hazard, "center": center, "avoidance_radius": avoidance_radius,
+                  "outer_radius": outer_radius}
         nearby_endpoints = [name for name, point in (("origin", origin), ("destination", destination))
                             if clearance_m([point, point], center) <= outer_radius]
         for name in nearby_endpoints:
@@ -186,12 +195,12 @@ async def _build_routes(origin, destination, profile, hazards, saved=None):
         normal = await request_route()
         line = normal["geometry"]["coordinates"]
         crossed = [h["id"] for h in active if clearance_m(
-            line, [h["longitude"], h["latitude"]]) <= REPORT_RADIUS_M]
+            line, [h["longitude"], h["latitude"]]) <= h["radius_m"]]
         detour = normal
         # Shared contract: keep the usual route when it crosses no report.
         needs_detour = any(h["id"] in crossed for h in usable)
         if needs_detour:
-            polygons = [[circle_ring(h["center"], outer_radius)] for h in usable]
+            polygons = [[circle_ring(h["center"], h["outer_radius"])] for h in usable]
             try:
                 detour = await request_route(polygons)
             except (httpx.RequestError, httpx.HTTPStatusError) as exc:
@@ -199,14 +208,14 @@ async def _build_routes(origin, destination, profile, hazards, saved=None):
                 if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (401, 403, 429):
                     raise
                 strongest = sorted(usable, key=lambda h: h["weight"], reverse=True)[:10]
-                polygons = [[circle_ring(h["center"], outer_radius)] for h in strongest]
+                polygons = [[circle_ring(h["center"], h["outer_radius"])] for h in strongest]
                 detour = await request_route(polygons)
-            if any(clearance_m(detour["geometry"]["coordinates"], h["center"]) < radius
+            if any(clearance_m(detour["geometry"]["coordinates"], h["center"]) < h["avoidance_radius"]
                    for h in usable):
                 raise ValueError("No route with the requested extra gap was found.")
 
     avoided = [h["id"] for h in usable if h["id"] in crossed and clearance_m(
-        detour["geometry"]["coordinates"], h["center"]) >= radius]
+        detour["geometry"]["coordinates"], h["center"]) >= h["avoidance_radius"]]
     extra = max(0, math.ceil((detour["properties"]["duration_s"]
                              - normal["properties"]["duration_s"]) / 60))
     report_count = sum(h["report_count"] for h in usable if h["id"] in avoided)
