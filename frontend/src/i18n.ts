@@ -1,13 +1,27 @@
 import { createContext, useContext } from 'react'
 
 export type Language = 'en' | 'es' | 'ht'
+
+function reportDuration(totalMinutes: number, language: Language): string {
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  const units = {
+    en: { hour: hours === 1 ? 'hour' : 'hours', minute: minutes === 1 ? 'minute' : 'minutes' },
+    es: { hour: hours === 1 ? 'hora' : 'horas', minute: minutes === 1 ? 'minuto' : 'minutos' },
+    ht: { hour: 'èdtan', minute: 'minit' },
+  }[language]
+  return [
+    ...(hours > 0 ? [`${hours} ${units.hour}`] : []),
+    ...(minutes > 0 || hours === 0 ? [`${minutes} ${units.minute}`] : []),
+  ].join(' ')
+}
 export const languageNames: Record<Language, string> = { en: 'English', es: 'Español', ht: 'Kreyòl' }
 
 const en = {
   incidents: 'Road incidents', incidentsLoading: 'Loading road incidents...', incidentsUnavailable: 'Road incidents are unavailable.',
   incidentsNotice: 'Live incidents. Routes do not avoid these icons.', incidentsEmpty: 'No incidents returned. Roads may still have disruptions.',
   incidentTypes: { crash: 'Crash', stalled_vehicle: 'Stopped vehicle', road_closed: 'Road closed', lane_closed: 'Lane closed' },
-  incidentAge: (n: number) => `Started ${n} min ago`,
+  incidentAge: (n: number) => `Started ${reportDuration(n, 'en')} ago`,
   traffic: 'Traffic', reportLevels: 'Reported activity levels', severityLabels: { low: 'Low', medium: 'Medium', high: 'High' },
   outsideArea: 'Vecino covers Miami-Dade only.', previewOnly: 'Demo time changes reports only. Routes stay as requested.',
   loadingLiveReports: 'Loading reports...', liveRouteNotice: 'Routes based on reported activity',
@@ -56,7 +70,7 @@ const en = {
   reportsStatus: (n: number) => `Demo reports: ${n} ${n === 1 ? 'area' : 'areas'}. Refreshes every minute.`,
   areaReports: (n: number) => `${n} ${n === 1 ? 'report' : 'reports'} in this area`,
   reportsNear: (n: number, place: string) => `${n} ${n === 1 ? 'report' : 'reports'} near ${place}`,
-  reportAge: (n: number) => `Reported ${n} min ago`,
+  reportAge: (n: number) => `Reported ${reportDuration(n, 'en')} ago`,
   confidence: (n: number) => `Confidence: ${n >= 0.7 ? 'High' : n >= 0.4 ? 'Medium' : 'Low'}`,
   routeHeadline: (minutes: number, areas: number) => `+${minutes} min · avoids ${areas} reported ${areas === 1 ? 'area' : 'areas'}`,
   routeDetails: (minutes: number, km: number, hasDetour = true) => `${hasDetour ? 'Detour' : 'Usual route'}: ${minutes} min · ${km.toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('en', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
@@ -70,7 +84,7 @@ const es: Messages = {
   incidents: 'Incidentes viales', incidentsLoading: 'Cargando incidentes viales...', incidentsUnavailable: 'Los incidentes viales no están disponibles.',
   incidentsNotice: 'Incidentes en vivo. Las rutas no evitan estos iconos.', incidentsEmpty: 'No se recibieron incidentes. Aún puede haber interrupciones.',
   incidentTypes: { crash: 'Choque', stalled_vehicle: 'Vehículo detenido', road_closed: 'Vía cerrada', lane_closed: 'Carril cerrado' },
-  incidentAge: (n) => `Comenzó hace ${n} min`,
+  incidentAge: (n) => `Comenzó hace ${reportDuration(n, 'es')}`,
   traffic: 'Tráfico', reportLevels: 'Niveles de actividad reportada', severityLabels: { low: 'Bajo', medium: 'Medio', high: 'Alto' },
   outsideArea: 'Vecino solo cubre Miami-Dade.', previewOnly: 'El tiempo de demostración solo cambia los reportes, no las rutas.',
   loadingLiveReports: 'Cargando reportes...', liveRouteNotice: 'Rutas basadas en actividad reportada',
@@ -119,7 +133,7 @@ const es: Messages = {
   reportsStatus: (n) => `Reportes de demostración: ${n} ${n === 1 ? 'zona' : 'zonas'}. Se actualizan cada minuto.`,
   areaReports: (n) => `${n} ${n === 1 ? 'reporte' : 'reportes'} en esta zona`,
   reportsNear: (n, place) => `${n} ${n === 1 ? 'reporte' : 'reportes'} cerca de ${place}`,
-  reportAge: (n) => `Reportado hace ${n} min`,
+  reportAge: (n) => `Reportado hace ${reportDuration(n, 'es')}`,
   confidence: (n) => `Confianza: ${n >= 0.7 ? 'Alta' : n >= 0.4 ? 'Media' : 'Baja'}`,
   routeHeadline: (minutes, areas) => `+${minutes} min · evita ${areas} ${areas === 1 ? 'zona reportada' : 'zonas reportadas'}`,
   routeDetails: (minutes, km, hasDetour = true) => `${hasDetour ? 'Desvío' : 'Ruta habitual'}: ${minutes} min · ${km.toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
@@ -130,7 +144,7 @@ const ht: Messages = {
   incidents: 'Ensidan sou wout', incidentsLoading: 'N ap chaje ensidan yo...', incidentsUnavailable: 'Ensidan sou wout yo pa disponib.',
   incidentsNotice: 'Ensidan aktyèl. Wout yo pa evite ikon sa yo.', incidentsEmpty: 'Pa gen ensidan ki retounen. Ka toujou gen pwoblèm sou wout la.',
   incidentTypes: { crash: 'Kolizyon', stalled_vehicle: 'Machin kanpe', road_closed: 'Wout fèmen', lane_closed: 'Vwa fèmen' },
-  incidentAge: (n) => `Te kòmanse ${n} minit de sa`,
+  incidentAge: (n) => `Te kòmanse ${reportDuration(n, 'ht')} de sa`,
   traffic: 'Trafik', reportLevels: 'Nivo aktivite rapòte', severityLabels: { low: 'Ba', medium: 'Mwayen', high: 'Wo' },
   outsideArea: 'Vecino kouvri Miami-Dade sèlman.', previewOnly: 'Tan demonstrasyon an chanje rapò yo sèlman, pa wout yo.',
   loadingLiveReports: 'N ap chaje rapò yo...', liveRouteNotice: 'Wout ki baze sou aktivite rapòte',
@@ -179,7 +193,7 @@ const ht: Messages = {
   reportsStatus: (n) => `Rapò demonstrasyon: ${n} zòn. Yo mete ajou chak minit.`,
   areaReports: (n) => `${n} rapò nan zòn sa a`,
   reportsNear: (n, place) => `${n} rapò toupre ${place}`,
-  reportAge: (n) => `Yo rapòte sa ${n} minit de sa`,
+  reportAge: (n) => `Yo rapòte sa ${reportDuration(n, 'ht')} de sa`,
   confidence: (n) => `Konfyans: ${n >= 0.7 ? 'Wo' : n >= 0.4 ? 'Mwayen' : 'Ba'}`,
   routeHeadline: (minutes, areas) => `+${minutes} min · evite ${areas} zòn rapòte`,
   routeDetails: (minutes, km, hasDetour = true) => `${hasDetour ? 'Detou' : 'Wout nòmal'}: ${minutes} min · ${km.toLocaleString('fr-HT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km · ${(km / 1.609).toLocaleString('fr-HT', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} mi`,
