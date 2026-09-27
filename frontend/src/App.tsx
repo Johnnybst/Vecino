@@ -15,6 +15,7 @@ import type { ThemeChoice } from './theme'
 import { TrafficLayer } from './TrafficLayer'
 import { MapControls } from './MapControls'
 import { FollowMe } from './FollowMe'
+import { askCompassPermission } from './compass'
 import { mapId } from './config'
 import type { Progress } from './nav'
 
@@ -385,7 +386,7 @@ function App() {
         {showDemo && <DemoMap onClose={() => setShowDemo(false)} />}
         <TrafficLayer enabled={traffic && !showDemo} />
         {route && !showDemo && <RouteLayer result={route} progress={progress} navigating={navigating}
-          onStart={() => setNavigating(true)} />}
+          onStart={() => { void askCompassPermission(); setNavigating(true) }} />}
       </APIProvider>
     </main>
     </I18nContext.Provider>

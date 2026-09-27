@@ -7,6 +7,7 @@ import { useI18n } from './i18n'
 import type { TextKey } from './i18n'
 import { headingAhead, metresAhead, progressOnLine } from './nav'
 import { mapId } from './config'
+import { askCompassPermission, watchCompass } from './compass'
 import type { Progress } from './nav'
 import type { RouteLine } from './routeTypes'
 
@@ -35,6 +36,11 @@ export function FollowMe({ route, onProgress, onRecalculate, navigating = false,
   const [progress, setProgress] = useState<Progress | null>(null)
   // Time of the latest location reading; the arrival time counts from it.
   const [fixAt, setFixAt] = useState(0)
+  // Which way you face: the phone's compass, or your direction of travel while moving.
+  const [compass, setCompass] = useState<number | null>(null)
+  const [travelHeading, setTravelHeading] = useState<number | null>(null)
+  // How far the map itself is turned, so the beam still points the right way on screen.
+  const [mapHeading, setMapHeading] = useState(0)
   const [message, setMessage] = useState<TextKey | ''>('')
   const [offRoute, setOffRoute] = useState(false)
   const [recalculating, setRecalculating] = useState(false)
@@ -61,6 +67,12 @@ export function FollowMe({ route, onProgress, onRecalculate, navigating = false,
     }
   }, [navigating, map])
 
+  // Listen to the compass only while following (it never leaves the phone).
+  useEffect(() => {
+    if (!active) return
+    return watchCompass(setCompass)
+  }, [active])
+
   useEffect(() => {
     if (!active) return
     firstFix.current = true
@@ -71,6 +83,8 @@ export function FollowMe({ route, onProgress, onRecalculate, navigating = false,
         setSpot(next)
         setFixAt(Date.now())
         setMessage('')
+        // Direction of travel is only meaningful while actually moving (> ~1 m/s).
+        if (Number.isFinite(coords.heading) && (coords.speed ?? 0) > 1) setTravelHeading(coords.heading)
         const line = routeRef.current?.geometry.coordinates
         const here = line && line.length >= 2 ? progressOnLine(next, line) : null
         if (map && navigatingRef.current) {
@@ -78,6 +92,7 @@ export function FollowMe({ route, onProgress, onRecalculate, navigating = false,
           const heading = here && here.offRouteM <= OFF_ROUTE_M ? headingAhead(line!, here)
             : Number.isFinite(coords.heading) ? coords.heading! : map.getHeading() ?? 0
           map.moveCamera({ center: next, zoom: TRIP_ZOOM, heading, tilt: TRIP_TILT })
+          setMapHeading(mapId ? heading : 0)
         } else if (map) {
           map.panTo(next)
           if (firstFix.current) map.setZoom(Math.max(map.getZoom() ?? 16, 16))
@@ -129,9 +144,12 @@ export function FollowMe({ route, onProgress, onRecalculate, navigating = false,
       setOffRoute(false)
       setProgress(null)
       onProgress(null)
+      setCompass(null)
+      setTravelHeading(null)
     } else if (!navigator.geolocation) {
       setMessage('locationUnavailable')
     } else {
+      void askCompassPermission()
       setMessage('locating')
       setFollowing(true)
     }
@@ -156,7 +174,11 @@ export function FollowMe({ route, onProgress, onRecalculate, navigating = false,
     </div>
   }
 
+  const facing = compass ?? travelHeading
   return <>
+    {active && spot && facing !== null && <Marker position={spot} zIndex={19} clickable={false}
+      icon={{ path: 'M 0,0 L -15,-36 A 39,39 0 0,1 15,-36 Z', rotation: (facing - (navigating ? mapHeading : 0) + 360) % 360,
+        fillColor: '#1a73e8', fillOpacity: 0.28, strokeWeight: 0, scale: 1 }} />}
     {active && spot && <Marker position={spot} title={t.youAreHere} zIndex={20}
       icon={{ path: 'M -8,0 a 8,8 0 1,0 16,0 a 8,8 0 1,0 -16,0',
         fillColor: '#1a73e8', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 3, scale: 1 }} />}
