@@ -22,8 +22,15 @@ REROUTE = {"high": True, "medium": True, "low": False}
 SHORT_LIVED_MINUTES = 180
 
 
-def severity_and_radius(report_count, confidence):
-    if report_count >= 4 or confidence >= 0.85:
+# IceOut's own level for a report (category_enum): 0 Critical, 1 Active, 2 Observed (3 Other = no level).
+ICEOUT_SEVERITY = {0: "high", 1: "medium", 2: "low"}
+
+
+def severity_and_radius(report_count, confidence, iceout_category=None):
+    # Use IceOut's own label when a report came from IceOut; otherwise judge by report count.
+    if iceout_category in ICEOUT_SEVERITY:
+        severity = ICEOUT_SEVERITY[iceout_category]
+    elif report_count >= 4 or confidence >= 0.85:
         severity = "high"
     elif report_count >= 2:
         severity = "medium"
@@ -49,9 +56,17 @@ def load_live_reports(at=None):
     try:
         with closing(sqlite3.connect(db_path.resolve().as_uri() + "?mode=ro", uri=True)) as db:
             db.row_factory = sqlite3.Row
+            has_reports = db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'raw_reports'").fetchone()
+            # The most serious IceOut label among the cluster's reports (lowest number = most serious).
+            iceout = """(SELECT MIN(CAST(json_extract(r.raw_metadata, '$.category_enum') AS INTEGER))
+                          FROM raw_reports r
+                          WHERE r.cluster_id = clusters.id AND r.source_type = 'iceout'
+                            AND json_extract(r.raw_metadata, '$.category_enum') IN (0, 1, 2))"""                 if has_reports else "NULL"
             rows = db.execute(
-                """SELECT id, primary_location, latitude, longitude,
-                          confidence_score, source_count, latest_report
+                f"""SELECT id, primary_location, latitude, longitude,
+                          confidence_score, source_count, latest_report,
+                          {iceout} AS iceout_category
                    FROM clusters
                    WHERE latitude IS NOT NULL AND longitude IS NOT NULL
                      AND latitude BETWEEN 25.13 AND 25.98
@@ -124,7 +139,7 @@ def reports_to_hazards(reports, at=None):
         weight = confidence * math.exp(-age_minutes / 90)
 
         count = report["source_count"]
-        severity, radius_m = severity_and_radius(count, confidence)
+        severity, radius_m = severity_and_radius(count, confidence, report.get("iceout_category"))
 
         # Critical stays (grayed) for the whole 6-hour window; the rest go after 3 hours.
         if severity != "high" and age_minutes >= SHORT_LIVED_MINUTES:
