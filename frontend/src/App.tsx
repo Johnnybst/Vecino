@@ -9,6 +9,9 @@ import type { RouteResult } from './routeTypes'
 import { I18nContext, messages, useI18n } from './i18n'
 import type { Language, TextKey } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
+import { ThemeToggle } from './ThemeToggle'
+import { applyTheme, darkMapStyles, initialTheme } from './theme'
+import type { Theme } from './theme'
 import { TrafficLayer } from './TrafficLayer'
 import { MapControls } from './MapControls'
 
@@ -285,6 +288,8 @@ function App() {
   const t = messages[language]
 
   useEffect(() => { document.documentElement.lang = language }, [language])
+  const [theme, setTheme] = useState<Theme>(initialTheme)
+  useEffect(() => { applyTheme(theme) }, [theme])
 
   if (!apiKey) {
     return (
@@ -307,9 +312,12 @@ function App() {
           mapTypeControl={false}
           streetViewControl={false}
           fullscreenControl={false}
+          styles={theme === 'dark' ? darkMapStyles : []}
         /></div>
         <section className="vecino-panel" hidden={showDemo} aria-label={t.chooseTrip}>
-          <div className="panel-title"><h1>Vecino</h1><LanguageSelect /></div>
+          <div className="panel-title"><h1>Vecino</h1>
+            <div className="heading-controls"><ThemeToggle theme={theme} onChange={setTheme} /><LanguageSelect /></div>
+          </div>
           <div hidden={route !== null}>
             <AddressPanel onShowDemo={() => setShowDemo(true)} onRoute={(result) => {
               setHistory(false); setMinutes(0); setPreviewAt(undefined); setRoute(result)

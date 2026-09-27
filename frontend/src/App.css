@@ -456,3 +456,48 @@
   color: #526159;
   font-size: 13px;
 }
+
+/* ── Dark mode (the ☾ switch; follows the phone's setting until chosen) ── */
+.theme-toggle { margin: 0; min-width: 44px; padding: 8px; font-size: 18px; line-height: 1; }
+:root[data-theme='dark'] { color: #e3ece6; background: #111714; color-scheme: dark; }
+:root[data-theme='dark'] .vecino-panel,
+:root[data-theme='dark'] .demo-heading,
+:root[data-theme='dark'] .demo-card,
+:root[data-theme='dark'] .hazards-status,
+:root[data-theme='dark'] .layer-help {
+  background: #1c2420; color: #e3ece6; border-color: #3a4a41; box-shadow: 0 4px 20px #0009;
+}
+:root[data-theme='dark'] .vecino-panel h1,
+:root[data-theme='dark'] .info-button { color: #8fd6ad; }
+:root[data-theme='dark'] .panel-subtitle,
+:root[data-theme='dark'] .address-status,
+:root[data-theme='dark'] .trip-status,
+:root[data-theme='dark'] .history-endpoints,
+:root[data-theme='dark'] .time-slider p,
+:root[data-theme='dark'] .incidents-status,
+:root[data-theme='dark'] .demo-card .demo-notice,
+:root[data-theme='dark'] .fade-endpoints,
+:root[data-theme='dark'] .hazards-status { color: #a9b9af; }
+:root[data-theme='dark'] .panel-map-controls,
+:root[data-theme='dark'] .time-slider { border-top-color: #33413a; }
+:root[data-theme='dark'] .location-button,
+:root[data-theme='dark'] .language-select select,
+:root[data-theme='dark'] .current-location {
+  background: #26312b; border-color: #3f5046; color: #cfe8d9;
+}
+:root[data-theme='dark'] .travel-option { border-color: #3f5046; }
+:root[data-theme='dark'] .travel-option:has(input:checked) { background: #2c4a39; border-color: #6cc496; color: #e3f5ea; }
+:root[data-theme='dark'] .sample-button { background: #2f7a52; }
+:root[data-theme='dark'] .layer-control input,
+:root[data-theme='dark'] .history-toggle input,
+:root[data-theme='dark'] .travel-option input,
+:root[data-theme='dark'] .time-slider input { accent-color: #6cc496; }
+:root[data-theme='dark'] .address-field gmp-place-autocomplete { color-scheme: dark; }
+:root[data-theme='dark'] .route-warning { background: #3a2f14; border-color: #c9973a; color: #f4e2b8; }
+:root[data-theme='dark'] .sighting-notice { background: #16301f; border-color: #3fae74; color: #cdebd9; }
+:root[data-theme='dark'] .location-button:focus-visible,
+:root[data-theme='dark'] .sample-button:focus-visible,
+:root[data-theme='dark'] .language-select select:focus-visible { outline-color: #8fd6ad; }
+/* A brighter green so the suggested route stands out on the dark map. */
+:root[data-theme='dark'] .route-shape { stroke: #3cc07e; }
+:root[data-theme='dark'] .legend-detour { border-top-color: #3cc07e; }
