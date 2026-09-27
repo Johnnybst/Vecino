@@ -28,15 +28,15 @@ If a box takes twice its estimate, stop and use the shortcut listed under it.
 
 ### `GET /hazards` — two new properties on each circle
 ```json
-"properties": { "...everything from before...", "severity": "high", "radius_m": 250 }
+"properties": { "...everything from before...", "severity": "high", "radius_m": 100 }
 ```
 | `severity` | When | `radius_m` | Base color |
 |---|---|---|---|
-| `"low"` | 1 report | 150 | amber `#D4A017` |
-| `"medium"` | 2–3 reports | 200 | orange `#E0702A` |
-| `"high"` | 4+ reports, or confidence ≥ 0.85 | 250 | red `#D0342C` |
+| `"low"` | 1 report | 75 | amber `#D4A017` |
+| `"medium"` | 2–3 reports | 90 | orange `#E0702A` |
+| `"high"` | 4+ reports, or confidence ≥ 0.85 | 100 | red `#D0342C` |
 
-The circle drawn by `/hazards` uses `radius_m`. Routing must use the same `radius_m` for each circle.
+Circles are about 1–2 blocks across (150–200 m). The circle drawn by `/hazards` uses `radius_m`. Routing must use the same `radius_m` for each circle.
 
 ### `POST /route` — new fields
 ```json

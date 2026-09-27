@@ -18,11 +18,11 @@ class SeverityTests(unittest.TestCase):
     def test_severity_properties_match_drawn_radius(self):
         now = datetime.now(timezone.utc)
         for count, confidence, severity, radius in (
-            (1, 0.65, "low", 150),
-            (2, 0.65, "medium", 200),
-            (3, 0.84, "medium", 200),
-            (4, 0.65, "high", 250),
-            (1, 0.85, "high", 250),
+            (1, 0.65, "low", 75),
+            (2, 0.65, "medium", 90),
+            (3, 0.84, "medium", 90),
+            (4, 0.65, "high", 100),
+            (1, 0.85, "high", 100),
         ):
             with self.subTest(count=count, confidence=confidence):
                 report = {

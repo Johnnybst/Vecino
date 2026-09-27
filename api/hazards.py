@@ -14,11 +14,12 @@ DEMO_STARTED_AT = datetime.now(timezone.utc)
 
 
 def severity_and_radius(report_count, confidence):
+    # About 1-2 Miami blocks across (150-200 m); routing adds its own 300 m gap on top.
     if report_count >= 4 or confidence >= 0.85:
-        return "high", 250
+        return "high", 100
     if report_count >= 2:
-        return "medium", 200
-    return "low", 150
+        return "medium", 90
+    return "low", 75
 
 
 def parse_time(value):

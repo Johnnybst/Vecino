@@ -7,8 +7,8 @@ function circle(lng: number, lat: number): Position[] {
   for (let i = 0; i < 24; i += 1) {
     const angle = (i / 24) * 2 * Math.PI
     points.push([
-      lng + (150 * Math.cos(angle)) / (111320 * Math.cos(lat * Math.PI / 180)),
-      lat + (150 * Math.sin(angle)) / 111320,
+      lng + (90 * Math.cos(angle)) / (111320 * Math.cos(lat * Math.PI / 180)),
+      lat + (90 * Math.sin(angle)) / 111320,
     ])
   }
   points.push(points[0])
