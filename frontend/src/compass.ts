@@ -7,27 +7,24 @@ type OrientationPermission = { requestPermission?: () => Promise<'granted' | 'de
 export async function askCompassPermission() {
   const request = (window.DeviceOrientationEvent as unknown as OrientationPermission | undefined)?.requestPermission
   if (!request) return
-  try { await request() } catch { /* declined: the beam just won't show */ }
+  try { await request() } catch { /* declined: the map falls back to the road's direction */ }
 }
 
 // Calls onFacing with the compass direction; returns a function that stops listening.
+// Every reading is passed on; the map smooths them.
 export function watchCompass(onFacing: (degrees: number) => void) {
-  let last = -1000
-  let lastAt = 0
   const handle = (event: Event) => {
     const e = event as IOSOrientationEvent
     const degrees = typeof e.webkitCompassHeading === 'number' ? e.webkitCompassHeading // iPhone
-      : e.absolute && typeof e.alpha === 'number' ? (360 - e.alpha) % 360 : null // Android
-    if (degrees === null) return
-    // A few updates a second is plenty, and skip tiny wobbles.
-    const now = performance.now()
-    const turned = Math.abs(((degrees - last + 540) % 360) - 180)
-    if (now - lastAt < 200 || turned < 3) return
-    last = degrees
-    lastAt = now
-    onFacing(degrees)
+      : (e.absolute || event.type === 'deviceorientationabsolute') && typeof e.alpha === 'number'
+        ? (360 - e.alpha) % 360 : null // Android (true north)
+    if (degrees !== null && Number.isFinite(degrees)) onFacing(degrees)
   }
-  const absolute = 'ondeviceorientationabsolute' in window
-  window.addEventListener(absolute ? 'deviceorientationabsolute' : 'deviceorientation', handle)
-  return () => window.removeEventListener(absolute ? 'deviceorientationabsolute' : 'deviceorientation', handle)
+  // Listen to both: Android sends true-north readings on the "absolute" event, iPhone on the plain one.
+  window.addEventListener('deviceorientationabsolute', handle)
+  window.addEventListener('deviceorientation', handle)
+  return () => {
+    window.removeEventListener('deviceorientationabsolute', handle)
+    window.removeEventListener('deviceorientation', handle)
+  }
 }
