@@ -527,3 +527,5 @@
 :root[data-theme='dark'] .follow-me .location-button[aria-pressed='true'] { background: #1a73e8; border-color: #1a73e8; color: #fff; }
 :root[data-theme='dark'] .follow-status { background: #1c2420; color: #e3ece6; box-shadow: 0 2px 8px #0009; }
 :root[data-theme='dark'] .follow-status.off-route { background: #3a2f14; border-color: #c9973a; color: #f4e2b8; }
+.follow-status.off-route p { margin: 0; }
+.follow-status.off-route .sample-button { margin-top: 8px; }

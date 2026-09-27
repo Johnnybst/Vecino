@@ -24,13 +24,18 @@ function distanceToLine(spot: Spot, line: [number, number][]) {
   return closest
 }
 
-export function FollowMe({ line }: { line?: [number, number][] }) {
+export function FollowMe({ line, onRecalculate }: {
+  line?: [number, number][]
+  // Asks for a new route from this spot; returns '' or the message to show.
+  onRecalculate?: (from: Spot) => Promise<TextKey | ''>
+}) {
   const { t } = useI18n()
   const map = useMap()
   const [following, setFollowing] = useState(false)
   const [spot, setSpot] = useState<Spot | null>(null)
   const [message, setMessage] = useState<TextKey | ''>('')
   const [offRoute, setOffRoute] = useState(false)
+  const [recalculating, setRecalculating] = useState(false)
   const misses = useRef(0)
   const firstFix = useRef(true)
   const lineRef = useRef(line)
@@ -66,6 +71,21 @@ export function FollowMe({ line }: { line?: [number, number][] }) {
     return () => navigator.geolocation.clearWatch(watch)
   }, [following, map])
 
+  // The location leaves the phone only here: one /route request, only when tapped.
+  async function newRouteHere() {
+    if (!spot || !onRecalculate || recalculating) return
+    setRecalculating(true)
+    setMessage('')
+    const error = await onRecalculate(spot)
+    setRecalculating(false)
+    if (error) {
+      setMessage(error)
+    } else {
+      misses.current = 0
+      setOffRoute(false)
+    }
+  }
+
   function toggle() {
     if (following) {
       setFollowing(false)
@@ -89,7 +109,11 @@ export function FollowMe({ line }: { line?: [number, number][] }) {
         <span aria-hidden="true">◎</span> {following ? t.stopFollowing : t.followMe}
       </button>
       {message && <p className="follow-status" role="status">{t[message]}</p>}
-      {following && offRoute && line && <p className="follow-status off-route" role="alert">{t.offRoute}</p>}
+      {following && offRoute && line && <div className="follow-status off-route" role="alert">
+        <p>{onRecalculate ? t.offRoute : t.offRouteEdit}</p>
+        {onRecalculate && <button type="button" className="sample-button" onClick={newRouteHere}
+          disabled={recalculating}>{recalculating ? t.findingRoutes : t.newRouteHere}</button>}
+      </div>}
     </div>
   </>
 }

@@ -5,7 +5,7 @@ import { DemoMap } from './DemoMap'
 import type { Hazard } from './HazardsLayer'
 import { RouteLayer } from './RouteLayer'
 import { isRouteResponse } from './routeTypes'
-import type { RouteResult } from './routeTypes'
+import type { RouteResponse, RouteResult } from './routeTypes'
 import { I18nContext, messages, useI18n } from './i18n'
 import type { Language, TextKey } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
@@ -109,15 +109,45 @@ function AddressInput({ kind, onSelect }: {
   )
 }
 
+type Profile = typeof travelModes[number]['profile']
+type Trip = { destination: Coordinates; profile: Profile }
+
+// One /route request, shared by the address panel and "New route from here".
+// Returns the routes, or the message key to show.
+async function requestRoute(origin: Coordinates, destination: Coordinates, profile: Profile,
+  signal: AbortSignal): Promise<RouteResponse | TextKey> {
+  const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+  try {
+    const response = await fetch(`${baseUrl}/route`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origin, destination, profile }),
+      cache: 'no-store',
+      credentials: 'omit',
+      signal,
+    })
+    if (!response.ok) {
+      const error = await response.json().catch(() => null)
+      return response.status === 422
+        ? error?.detail === 'outside_area' ? 'outsideArea' : 'reselectAddresses'
+        : 'routesUnavailable'
+    }
+    const data: unknown = await response.json()
+    return isRouteResponse(data) ? data : 'routeIncomplete'
+  } catch {
+    return signal.aborted ? 'routeStopped' : 'serverUnavailable'
+  }
+}
+
 function AddressPanel({ onShowDemo, onRoute, hazards }: {
   onShowDemo: () => void
-  onRoute: (result: RouteResult) => void
+  onRoute: (result: RouteResult, trip: Trip) => void
   hazards: Hazard[]
 }) {
   const { t } = useI18n()
   const [origin, setOrigin] = useState<Coordinates | null>(null)
   const [destination, setDestination] = useState<Coordinates | null>(null)
-  const [profile, setProfile] = useState<typeof travelModes[number]['profile']>('driving-car')
+  const [profile, setProfile] = useState<Profile>('driving-car')
   const [originMode, setOriginMode] = useState<'address' | 'locating' | 'location'>('address')
   const [locationError, setLocationError] = useState<TextKey | ''>('')
   const locationRequest = useRef(0)
@@ -141,33 +171,10 @@ function AddressPanel({ onShowDemo, onRoute, hazards }: {
     setLoadingRoute(true)
     setRouteError('')
     const timeout = setTimeout(() => controller.abort(), 70000)
-    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
     try {
-      const response = await fetch(`${baseUrl}/route`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ origin, destination, profile }),
-        cache: 'no-store',
-        credentials: 'omit',
-        signal: controller.signal,
-      })
-      if (!response.ok) {
-        const error = await response.json().catch(() => null)
-        setRouteError(response.status === 422
-          ? error?.detail === 'outside_area' ? 'outsideArea' : 'reselectAddresses'
-          : 'routesUnavailable')
-        return
-      }
-      const data: unknown = await response.json()
-      if (!isRouteResponse(data)) {
-        setRouteError('routeIncomplete')
-        return
-      }
-      onRoute({ data, hazards })
-    } catch {
-      setRouteError(controller.signal.aborted
-        ? 'routeStopped'
-        : 'serverUnavailable')
+      const result = await requestRoute(origin, destination, profile, controller.signal)
+      if (typeof result === 'string') setRouteError(result)
+      else onRoute({ data: result, hazards }, { destination, profile })
     } finally {
       clearTimeout(timeout)
       routeRequest.current = null
@@ -285,6 +292,23 @@ function App() {
   }, [minutes, history, historyNow])
   const [hazards, setHazards] = useState<Hazard[]>([])
   const [route, setRoute] = useState<RouteResult | null>(null)
+  const [trip, setTrip] = useState<Trip | null>(null)
+
+  // "New route from here": same destination and travel mode, starting at the blue dot.
+  async function recalculate(from: Coordinates): Promise<TextKey | ''> {
+    if (!trip) return 'routesUnavailable'
+    if (!insideCoverage(from)) return 'outsideArea'
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 70000)
+    try {
+      const result = await requestRoute(from, trip.destination, trip.profile, controller.signal)
+      if (typeof result === 'string') return result
+      setRoute({ data: result, hazards })
+      return ''
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
   const [language, setLanguage] = useState<Language>('en')
   const t = messages[language]
 
@@ -323,19 +347,20 @@ function App() {
           streetViewControl={false}
           fullscreenControl={false}
           styles={theme === 'dark' ? darkMapStyles : []}
-        />{!showDemo && <FollowMe line={route?.data.safe.geometry.coordinates} />}</div>
+        />{!showDemo && <FollowMe line={route?.data.safe.geometry.coordinates}
+          onRecalculate={route && trip ? recalculate : undefined} />}</div>
         <section className="vecino-panel" hidden={showDemo} aria-label={t.chooseTrip}>
           <div className="panel-title"><h1>Vecino</h1>
             <div className="heading-controls"><ThemeToggle choice={themeChoice} onChange={(choice) => { setClock(new Date()); setThemeChoice(choice) }} /><LanguageSelect /></div>
           </div>
           <div hidden={route !== null}>
-            <AddressPanel onShowDemo={() => setShowDemo(true)} onRoute={(result) => {
-              setHistory(false); setMinutes(0); setPreviewAt(undefined); setRoute(result)
+            <AddressPanel onShowDemo={() => setShowDemo(true)} onRoute={(result, nextTrip) => {
+              setHistory(false); setMinutes(0); setPreviewAt(undefined); setRoute(result); setTrip(nextTrip)
             }} hazards={hazards} />
           </div>
           {route && <div className="trip-heading"><strong>{t.yourRoutes}</strong>
             <button type="button" className="location-button" onClick={() => {
-              setRoute(null); setHistory(false); setMinutes(0); setPreviewAt(undefined)
+              setRoute(null); setTrip(null); setHistory(false); setMinutes(0); setPreviewAt(undefined)
             }}>{t.editTrip}</button></div>}
           {!showDemo && <MapControls traffic={traffic} onTraffic={setTraffic} incidents={incidents} onIncidents={setIncidents}
             history={history} onHistory={(enabled) => {
