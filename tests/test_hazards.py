@@ -84,6 +84,27 @@ class LiveHazardsTests(unittest.TestCase):
                 db.execute("UPDATE clusters SET latest_report = ? WHERE id = 1", (stamp,))
             self.assertEqual(get_hazards(self.now)["features"][0]["properties"]["id"], "hz_1")
 
+    def test_live_coverage_includes_edges_and_excludes_outside_reports(self):
+        # NEWAGENTS.md defines a rectangular coverage area, including its edges.
+        cases = [
+            (25.13, -80.88, True), (25.98, -80.11, True),
+            (25.13, -80.11, True), (25.98, -80.88, True),
+            (25.1299, -80.2, False), (25.9801, -80.2, False),
+            (25.8, -80.8801, False), (25.8, -80.1099, False),
+            (26.12, -80.14, False),
+        ]
+        for lat, lng, included in cases:
+            with self.subTest(lat=lat, lng=lng):
+                with closing(sqlite3.connect(self.path)) as db, db:
+                    db.execute("UPDATE clusters SET latitude = ?, longitude = ? WHERE id = 1",
+                               (lat, lng))
+                before = self.path.read_bytes()
+                reports = load_live_reports(self.now)
+                self.assertEqual(any(r["id"] == 1 for r in reports), included)
+                features = get_hazards(self.now)["features"]
+                self.assertEqual(any(f["properties"]["id"] == "hz_1" for f in features), included)
+                self.assertEqual(self.path.read_bytes(), before)
+
     def test_time_preview_fades_all_reports(self):
         self.assertEqual(get_hazards(self.now + timedelta(hours=4))["features"], [])
 

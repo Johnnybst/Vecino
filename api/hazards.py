@@ -43,6 +43,8 @@ def load_live_reports(at=None):
                           confidence_score, source_count, latest_report
                    FROM clusters
                    WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+                     AND latitude BETWEEN 25.13 AND 25.98
+                     AND longitude BETWEEN -80.88 AND -80.11
                      AND julianday(latest_report) >= julianday(?)
                      AND julianday(latest_report) <= julianday(?)
                    ORDER BY julianday(latest_report) DESC""",
