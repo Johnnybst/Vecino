@@ -235,6 +235,28 @@
   color: #573b0b;
 }
 
+.follow-me {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  max-width: min(240px, calc(100% - 24px));
+  text-align: right;
+}
+.follow-me .location-button { margin: 0; box-shadow: 0 2px 8px #183b2933; background: #fff; }
+.follow-me .location-button[aria-pressed='true'] { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+.follow-status {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 2px 8px #183b2933;
+  color: #20392b;
+  font-size: 13px;
+  text-align: left;
+}
+.follow-status.off-route { border: 2px solid #986719; background: #fff4d6; color: #573b0b; }
+
 .sighting-notice {
   border-color: #2e8b57;
   background: #e8f5ee;

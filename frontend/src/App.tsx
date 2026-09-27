@@ -11,6 +11,7 @@ import type { Language, TextKey } from './i18n'
 import { LanguageSelect } from './LanguageSelect'
 import { TrafficLayer } from './TrafficLayer'
 import { MapControls } from './MapControls'
+import { FollowMe } from './FollowMe'
 
 
 const ignorePreviewReports = () => {}
@@ -307,7 +308,7 @@ function App() {
           mapTypeControl={false}
           streetViewControl={false}
           fullscreenControl={false}
-        /></div>
+        />{!showDemo && <FollowMe line={route?.data.safe.geometry.coordinates} />}</div>
         <section className="vecino-panel" hidden={showDemo} aria-label={t.chooseTrip}>
           <div className="panel-title"><h1>Vecino</h1><LanguageSelect /></div>
           <div hidden={route !== null}>
